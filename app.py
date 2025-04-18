@@ -25,3 +25,26 @@ def webhook():
 
     return "OK", 200
 
+import requests
+import os
+
+LINE_CHANNEL_ACCESS_TOKEN = os.environ.get("LINE_CHANNEL_ACCESS_TOKEN")
+
+def send_reply(reply_token, message):
+    url = "https://api.line.me/v2/bot/message/reply"
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {LINE_CHANNEL_ACCESS_TOKEN}"
+    }
+    payload = {
+        "replyToken": reply_token,
+        "messages": [
+            {
+                "type": "text",
+                "text": message
+            }
+        ]
+    }
+    requests.post(url, headers=headers, json=payload)
+
+
