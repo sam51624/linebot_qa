@@ -7,12 +7,9 @@ app = Flask(__name__)
 @app.route("/webhook", methods=["POST"])
 def webhook():
     event = request.get_json()
-    try:
-        user_id = event["events"][0]["source"]["userId"]
-        message = event["events"][0]["message"]["text"]
-    except:
-        return abort(400)
 
-    answer = answer_question(message)
-    log_to_sheets(user_id, message, answer)
-    return "OK"
+    if event is None:
+        return "Bad Request", 400
+
+    # ทดสอบให้ตอบกลับ 200 ไปก่อน
+    return "OK", 200
