@@ -21,7 +21,8 @@ def search_faiss(query):
             name = str(row.get("ชื่อสินค้า", "-"))
             code = str(row.get("รหัสสินค้า", "-"))
             tag = str(row.get("Tag", "-"))
-            raw_qty = str(row.get("จำนวน", "0")).replace("(", "-").replace(")", "").replace(",", "")
+            # แปลงจำนวนให้เป็น float แบบปลอดภัย
+raw_qty = str(row.get("จำนวน", "0")).replace("(", "-").replace(")", "").replace(",", "")
 try:
     qty = float(raw_qty)
 except:
