@@ -1,26 +1,24 @@
 from openai import OpenAI
 import os
-from vector_store import search_faiss  # ดึง context จากเวกเตอร์หรือฐานข้อมูล
-# หากคุณยังไม่ใช้ vector store สามารถเปลี่ยน search_faiss เป็นฟังก์ชันที่คืน string ก็ได้
+from vector_store import search_faiss
 
-# เตรียม client สำหรับเรียก OpenAI
-client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
+# สร้าง client ด้วย API Key จาก Environment
+api_key = os.environ.get("OPENAI_API_KEY")
+client = OpenAI(api_key=api_key)
 
-# Prompt สำหรับ ChatGPT
 system_message = """
-คุณคือพนักงานขายของร้านคลองถมช้อปปิ้งมอลล์
-พูดจาสุภาพ กระชับ แนะนำสินค้าอย่างมืออาชีพ
-เน้นว่าร้านมีของพร้อมส่ง ราคาถูก และซื้อได้ที่หน้าร้าน
-หากลูกค้าไม่ตรงกับสินค้า ให้ตอบว่า 'ขออภัยค่ะ รบกวนสอบถามเพิ่มเติมได้นะคะ'
+คุณคือพนักงานขายของร้านคลองถมช้อปปิ้งมอลล์...
 """
 
 def answer_question(user_message):
-    # ดึงข้อมูล context จาก vector store หรือข้อมูลที่เกี่ยวข้อง
     context = search_faiss(user_message)
 
-    # เรียก ChatGPT พร้อม context
+    # ✅ พิมพ์ API Key (แค่บางส่วน) เพื่อ debug
+    print("✅ OPENAI_API_KEY = ", api_key[:8], "***")
+
+    # เรียก OpenAI
     response = client.chat.completions.create(
-        model="gpt-3.5-turbo",  # หรือ "gpt-4"
+        model="gpt-3.5-turbo",
         messages=[
             {"role": "system", "content": system_message},
             {"role": "user", "content": f"ข้อมูลสินค้า:\n{context}\n\nคำถาม:\n{user_message}"}
@@ -30,3 +28,4 @@ def answer_question(user_message):
     )
 
     return response.choices[0].message.content.strip()
+
