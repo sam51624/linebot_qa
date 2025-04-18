@@ -21,7 +21,12 @@ def search_faiss(query):
             name = str(row.get("ชื่อสินค้า", "-"))
             code = str(row.get("รหัสสินค้า", "-"))
             tag = str(row.get("Tag", "-"))
-            qty = float(row.get("จำนวน", 0))
+            raw_qty = str(row.get("จำนวน", "0")).replace("(", "-").replace(")", "").replace(",", "")
+try:
+    qty = float(raw_qty)
+except:
+    qty = 0
+
             price = str(row.get("ราคาขาย", "-"))
 
             stock_status = f"คงเหลือ {qty} ชิ้น" if qty > 0 else "สินค้าหมด"
