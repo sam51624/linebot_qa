@@ -1,6 +1,5 @@
 from flask import Flask, request, abort
 from answer_question import answer_question
-from data_logger import log_to_sheets
 import requests
 import os
 
@@ -34,17 +33,14 @@ def webhook():
 
     for e in event["events"]:
         if e["type"] == "message" and e["message"]["type"] == "text":
-            user_id = e["source"]["userId"]
             user_message = e["message"]["text"]
             reply_token = e["replyToken"]
 
-            # ===== ใช้ AI ตอบลูกค้า =====
+            # ใช้ OpenAI ตอบกลับ
             reply_text = answer_question(user_message)
 
-            # ===== ส่งข้อความกลับไปที่ LINE =====
+            # ส่งข้อความกลับ LINE
             send_reply(reply_token, reply_text)
 
-            # ===== บันทึก log คำถาม-คำตอบ =====
-            log_to_sheets(user_id, user_message, reply_text)
-
     return "OK", 200
+
