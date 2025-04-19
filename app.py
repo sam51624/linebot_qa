@@ -73,9 +73,8 @@ def webhook():
     )
 
             elif intent == "check_stock":
-               reply_text = (
-                   "หากต้องการเช็คสินค้าว่ามีหรือไม่ กรุณาระบุชื่อหรือรหัสสินค้าให้ชัดเจนค่ะ\n"
-                   "ตัวอย่าง: 'มีรหัส 5M-30Teeth ไหม?' ทางระบบจะช่วยค้นหาให้ค่ะ"
+               reply_text = answer_question(user_message)
+
     )
 
             else:
