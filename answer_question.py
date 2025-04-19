@@ -8,7 +8,10 @@ system_message = """
 คุณคือพนักงานขายของร้านคลองถมช้อปปิ้งมอลล์ ให้ข้อมูลสินค้า ตอบคำถามลูกค้า และแนะนำสินค้าที่ใกล้เคียงได้อย่างมืออาชีพ
 """
 
-def answer_question(user_message):
+# เก็บประวัติการคุยของแต่ละ user
+chat_history = {}
+
+def answer_question(user_message, user_id=None):
     context = search_faiss(user_message)
 
     # ✅ ถ้าไม่พบ context ให้หาสินค้าใกล้เคียงจาก keyword
@@ -22,16 +25,31 @@ def answer_question(user_message):
     # ✅ ตัด context ไม่ให้ยาวเกินไป
     context = context[:2000]
 
+    messages = [
+        {"role": "system", "content": system_message},
+        {"role": "user", "content": f"ข้อมูลสินค้า:\n{context}\n\nคำถาม:\n{user_message}"}
+    ]
+
+    # เพิ่มประวัติการคุย (chat memory)
+    if user_id:
+        user_chat = chat_history.get(user_id, [])[-3:]  # เอาแค่ล่าสุด 3 ข้อความ
+        for m in user_chat:
+            messages.insert(-1, m)  # แทรกก่อน user message ล่าสุด
+        # บันทึกข้อความล่าสุดไว้
+        chat_history.setdefault(user_id, []).append({"role": "user", "content": user_message})
+
     response = client.chat.completions.create(
         model="gpt-3.5-turbo",
-        messages=[
-            {"role": "system", "content": system_message},
-            {"role": "user", "content": f"ข้อมูลสินค้า:\n{context}\n\nคำถาม:\n{user_message}"}
-        ],
-        temperature=0.5,   # 👈 ปรับให้นุ่มนวลแต่ยังไม่หลุดหัวข้อ
-        max_tokens=300     # 👈 จำกัดความยาวคำตอบ
+        messages=messages,
+        temperature=0.5,
+        max_tokens=300
     )
 
-    return response.choices[0].message.content.strip()
+    reply = response.choices[0].message.content.strip()
 
+    # บันทึกคำตอบลงประวัติด้วย
+    if user_id:
+        chat_history[user_id].append({"role": "assistant", "content": reply})
+
+    return reply
 
