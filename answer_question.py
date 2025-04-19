@@ -16,7 +16,7 @@ def answer_question(user_message, user_id=None):
 
     # ✅ ถ้าไม่พบ context ให้หาสินค้าใกล้เคียงจาก keyword
     if not context:
-        similar_context = search_faiss(user_message[:4])  # ลองหารหัส/ชื่อใกล้เคียง
+        similar_context = search_faiss(user_message[:4])
         if similar_context:
             return f"ไม่พบสินค้าตรงกับ: '{user_message}'\nแต่เราแนะนำสินค้าใกล้เคียงดังนี้:\n{similar_context[:1000]}"
         else:
@@ -25,19 +25,18 @@ def answer_question(user_message, user_id=None):
     # ✅ ตัด context ไม่ให้ยาวเกินไป
     context = context[:2000]
 
-    messages = [
-        {"role": "system", "content": system_message},
-        {"role": "user", "content": f"ข้อมูลสินค้า:\n{context}\n\nคำถาม:\n{user_message}"}
-    ]
+    # เตรียมข้อความ
+    messages = [{"role": "system", "content": system_message}]
 
-    # เพิ่มประวัติการคุย (chat memory)
-    if user_id:
-        user_chat = chat_history.get(user_id, [])[-3:]  # เอาแค่ล่าสุด 3 ข้อความ
-        for m in user_chat:
-            messages.insert(-1, m)  # แทรกก่อน user message ล่าสุด
-        # บันทึกข้อความล่าสุดไว้
-        chat_history.setdefault(user_id, []).append({"role": "user", "content": user_message})
+    # ✅ ถ้ามี user_id ให้ดึงประวัติการคุย
+    if user_id and user_id in chat_history:
+        history = chat_history[user_id][-6:]  # ใช้ 3 คู่สนทนา (user-assistant)
+        messages.extend(history)
 
+    # ✅ เพิ่มคำถามล่าสุด
+    messages.append({"role": "user", "content": f"ข้อมูลสินค้า:\n{context}\n\nคำถาม:\n{user_message}"})
+
+    # เรียกโมเดล
     response = client.chat.completions.create(
         model="gpt-3.5-turbo",
         messages=messages,
@@ -47,9 +46,12 @@ def answer_question(user_message, user_id=None):
 
     reply = response.choices[0].message.content.strip()
 
-    # บันทึกคำตอบลงประวัติด้วย
+    # ✅ บันทึกบทสนทนาใหม่เข้า history
     if user_id:
+        chat_history.setdefault(user_id, []).append({"role": "user", "content": user_message})
         chat_history[user_id].append({"role": "assistant", "content": reply})
+        chat_history[user_id] = chat_history[user_id][-10:]  # จำกัดไม่เกิน 5 รอบบทสนทนา (10 ข้อความ)
 
     return reply
+
 
