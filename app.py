@@ -30,7 +30,7 @@ def webhook():
             if user_id not in chat_history:
                 chat_history[user_id] = []
             chat_history[user_id].append(user_message)
-            chat_history[user_id] = chat_history[user_id][-5:] # จำกัดให้เก็บแค่ 5 ข้อความล่าสุด
+            chat_history[user_id] = chat_history[user_id][-5:]
 
             # ตรวจจับ Intent
             intent = detect_intent(user_message)
@@ -38,10 +38,10 @@ def webhook():
 
             # สร้างคำตอบตาม intent
             if intent == "product_inquiry":
-                reply_text = answer_question(user_message, chat_history[user_id])
+                reply_text = answer_question(user_message, user_id)
 
             elif intent == "price_inquiry":
-                reply_text = answer_question(user_message, chat_history[user_id])
+                reply_text = answer_question(user_message, user_id)
 
             elif intent == "order_request":
                 reply_text = "ขออภัยค่ะ ขณะนี้ยังไม่รองรับการสั่งซื้อผ่านไลน์ หากสนใจสามารถมาที่หน้าร้านคลองถมช้อปปิ้งมอลล์ได้เลยค่ะ"
@@ -82,7 +82,7 @@ def webhook():
                 )
 
             elif intent == "check_stock":
-                reply_text = answer_question(user_message, chat_history[user_id])
+                reply_text = answer_question(user_message, user_id)
 
             else:
                 reply_text = "ขออภัยค่ะ ไม่เข้าใจคำถาม หากต้องการสอบถามสินค้า กรุณาระบุรหัสหรือชื่อสินค้าอีกครั้งนะคะ 😊"
@@ -111,6 +111,3 @@ def send_reply(reply_token, message):
         ]
     }
     requests.post(url, headers=headers, json=payload)
-
-
-
