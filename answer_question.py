@@ -28,8 +28,8 @@ def answer_question(user_message):
             {"role": "system", "content": system_message},
             {"role": "user", "content": f"ข้อมูลสินค้า:\n{context}\n\nคำถาม:\n{user_message}"}
         ],
-        temperature=0.7,
-        max_tokens=500
+        temperature=0.5,   # 👈 ปรับให้นุ่มนวลแต่ยังไม่หลุดหัวข้อ
+        max_tokens=300     # 👈 จำกัดความยาวคำตอบ
     )
 
     return response.choices[0].message.content.strip()
