@@ -5,6 +5,7 @@ from intent_classifier import detect_intent  # 👈 เพิ่มตรงน�
 
 import requests
 import os
+from datetime import datetime  # 👉 สำหรับ timestamp (ถ้าอยากบันทึกเองเพิ่ม)
 
 app = Flask(__name__)
 LINE_CHANNEL_ACCESS_TOKEN = os.environ.get("LINE_CHANNEL_ACCESS_TOKEN")
@@ -26,6 +27,7 @@ def webhook():
             intent = detect_intent(user_message)
             print("🎯 INTENT:", intent)
 
+            # ตอบกลับตาม intent
             if intent == "product_inquiry":
                 reply_text = answer_question(user_message)
 
@@ -41,7 +43,11 @@ def webhook():
             else:
                 reply_text = "ขออภัยค่ะ ไม่เข้าใจคำถาม หากต้องการสอบถามสินค้า กรุณาระบุรหัสหรือชื่อสินค้าอีกครั้งนะคะ 😊"
 
+            # ส่งข้อความกลับ LINE
             send_reply(reply_token, reply_text)
+
+            # ✅ บันทึกข้อมูลลง Google Sheet
+            log_to_sheets(user_id, user_message, reply_text, intent)
 
     return "OK", 200
 
@@ -61,5 +67,4 @@ def send_reply(reply_token, message):
         ]
     }
     requests.post(url, headers=headers, json=payload)
-
 
