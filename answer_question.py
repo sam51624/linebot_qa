@@ -1,6 +1,8 @@
 from openai import OpenAI
 import os
+import re
 from vector_store import search_faiss
+from data_loader import load_data_from_sheet
 
 client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 
@@ -11,19 +13,33 @@ system_message = """
 # เก็บประวัติการคุยของแต่ละ user
 chat_history = {}
 
+def get_product_info_from_sheet(product_code):
+    df = load_data_from_sheet()
+    product_code = str(product_code).strip()
+    row = df[df["รหัสสินค้า"].astype(str).str.strip() == product_code]
+    if not row.empty:
+        name = row.iloc[0]["ชื่อสินค้า"]
+        price = row.iloc[0]["ราคาขาย"]
+        qty = row.iloc[0]["จำนวนพร้อมขาย"]
+        return f"รหัสสินค้า {product_code} คือ {name} ราคาขาย {price:.2f} บาท คงเหลือ {qty} ชิ้น"
+    else:
+        return None
+
 def answer_question(user_message, user_id=None):
+    # ✅ ถ้าพบคำถามเกี่ยวกับราคา/สินค้า → ดึงจาก Google Sheet โดยตรง
+    if re.search(r"(ราคาเท่าไหร่|ราคา[ ]*สินค้า|ราคาของ|มีของมั้ย|มีของไหม|มีสินค้าไหม|มีสินค้ามั้ย)", user_message):
+        found_code = re.search(r"\b\d{6}\b", user_message)
+        if found_code:
+            code = found_code.group()
+            product_info = get_product_info_from_sheet(code)
+            if product_info:
+                return product_info
+
     context = search_faiss(user_message)
 
-    # ✅ ถ้าไม่พบ context ให้หาสินค้าใกล้เคียงจากประวัติ
-    if not context and user_id and user_id in chat_history:
-        recent_history = chat_history[user_id][-4:]  # ดู 4 ข้อความล่าสุดย้อนหลัง
-        for prev in reversed(recent_history):
-            if prev["role"] == "user" and any(x in prev["content"] for x in ["รหัส", "ชื่อ", "product", "สินค้า"]):
-                context = search_faiss(prev["content"])
-                break
-
+    # ✅ ถ้าไม่พบ context ให้หาสินค้าใกล้เคียงจาก keyword
     if not context:
-        similar_context = search_faiss(user_message[:4])  # ลองหารหัส/ชื่อใกล้เคียง
+        similar_context = search_faiss(user_message[:4])
         if similar_context:
             return f"ไม่พบสินค้าตรงกับ: '{user_message}'\nแต่เราแนะนำสินค้าใกล้เคียงดังนี้:\n{similar_context[:1000]}"
         else:
@@ -42,7 +58,6 @@ def answer_question(user_message, user_id=None):
         user_chat = chat_history.get(user_id, [])[-3:]  # เอาแค่ล่าสุด 3 ข้อความ
         for m in user_chat:
             messages.insert(-1, m)  # แทรกก่อน user message ล่าสุด
-        # บันทึกข้อความล่าสุดไว้
         chat_history.setdefault(user_id, []).append({"role": "user", "content": user_message})
 
     response = client.chat.completions.create(
