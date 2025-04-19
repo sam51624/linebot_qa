@@ -2,6 +2,7 @@ from flask import Flask, request
 from answer_question import answer_question
 from data_logger import log_to_sheets
 from intent_classifier import detect_intent  # 👈 เพิ่มตรงนี้
+from test_logger import test_logging  # 👈 เพิ่มด้านบน (ถ้ายังไม่มี)
 
 import requests
 import os
@@ -48,7 +49,7 @@ def webhook():
 
             # ✅ บันทึกข้อมูลลง Google Sheet
             log_to_sheets(user_id, user_message, reply_text, intent)
-
+    test_logging()  # 👈 ใส่แค่บรรทัดนี้ไว้ชั่วคราว
     return "OK", 200
 
 def send_reply(reply_token, message):
