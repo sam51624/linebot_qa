@@ -1,6 +1,5 @@
 import openai
 import os
-
 from openai import OpenAI
 
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
@@ -15,7 +14,8 @@ def detect_intent(user_message):
                     "content": (
                         "คุณคือระบบแยกประเภทคำถามลูกค้า (Intent Classification) สำหรับร้านคลองถมช้อปปิ้งมอลล์ "
                         "ให้ตอบเพียง intent เดียวจากรายการนี้เท่านั้น: "
-                        "product_inquiry, order_request, price_inquiry, general_question, unknown. อย่าตอบอย่างอื่น"
+                        "product_inquiry, order_request, price_inquiry, general_question, store_location, unknown. "
+                        "หากไม่แน่ใจให้ตอบว่า unknown เท่านั้น ห้ามตอบอย่างอื่น"
                     )
                 },
                 {
@@ -33,23 +33,3 @@ def detect_intent(user_message):
     except Exception as e:
         print("❌ Error in detect_intent:", str(e))
         return "unknown"
-        intent_examples = {
-    "product_inquiry": [
-        "มีรหัสสินค้า", "มีสินค้า", "มีสายไฟ", "มอเตอร์", "บอร์ด"
-    ],
-    "price_inquiry": [
-        "ราคาเท่าไหร่", "แพงไหม", "กี่บาท"
-    ],
-    "order_request": [
-        "สั่งซื้อได้ไหม", "ส่งของไหม", "ซื้อได้ไหม"
-    ],
-    "general_question": [
-        "เปิดกี่โมง", "เบอร์โทร", "ชื่อร้าน", "ติดต่อ"
-    ],
-    "store_location": [
-        "ร้านอยู่ที่ไหน", "ขอแผนที่", "ไปยังไง", "แผนที่ร้าน", "พิกัดร้าน"
-    ]
-}
-
-
-
