@@ -68,7 +68,11 @@ def send_reply(reply_token, message):
     }
     requests.post(url, headers=headers, json=payload)
     if __name__ == "__main__":
-    from test_logger import test_logging
-    test_logging()
+        from test_logger import test_logging
+        test_logging()
+
+
+
+
 
 
