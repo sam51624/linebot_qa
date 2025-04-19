@@ -23,7 +23,8 @@ def detect_intent(user_message):
                     "content": f"ข้อความ: {user_message}"
                 }
             ],
-            temperature=0.0
+            temperature=0.3,  # 👈 ปรับลดเพื่อให้ตอบแม่นขึ้น
+            max_tokens=30     # 👈 จำกัดให้ตอบแค่ intent เดียว
         )
 
         intent = response.choices[0].message.content.strip()
