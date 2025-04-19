@@ -33,5 +33,23 @@ def detect_intent(user_message):
     except Exception as e:
         print("❌ Error in detect_intent:", str(e))
         return "unknown"
+        intent_examples = {
+    "product_inquiry": [
+        "มีรหัสสินค้า", "มีสินค้า", "มีสายไฟ", "มอเตอร์", "บอร์ด"
+    ],
+    "price_inquiry": [
+        "ราคาเท่าไหร่", "แพงไหม", "กี่บาท"
+    ],
+    "order_request": [
+        "สั่งซื้อได้ไหม", "ส่งของไหม", "ซื้อได้ไหม"
+    ],
+    "general_question": [
+        "เปิดกี่โมง", "เบอร์โทร", "ชื่อร้าน", "ติดต่อ"
+    ],
+    "store_location": [
+        "ร้านอยู่ที่ไหน", "ขอแผนที่", "ไปยังไง", "แผนที่ร้าน", "พิกัดร้าน"
+    ]
+}
+
 
 
