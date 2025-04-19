@@ -36,7 +36,11 @@ def webhook():
             intent = detect_intent(user_message)
             print("🎯 INTENT:", intent)
 
-            # สร้างคำตอบตาม intent
+            # สร้างคำตอบตาม intent พร้อม QID
+            from hashlib import md5
+            import time
+            qid = "#Q" + md5((user_id + user_message + str(time.time())).encode()).hexdigest()[:6]
+
             if intent == "product_inquiry":
                 reply_text = answer_question(user_message, user_id)
 
@@ -87,14 +91,16 @@ def webhook():
             else:
                 reply_text = "ขออภัยค่ะ ไม่เข้าใจคำถาม หากต้องการสอบถามสินค้า กรุณาระบุรหัสหรือชื่อสินค้าอีกครั้งนะคะ 😊"
 
+            # เพิ่ม QID
+            reply_text += f"\n\n{qid}"
+
             # ส่งข้อความกลับ LINE
             send_reply(reply_token, reply_text)
 
-            # ✅ บันทึกข้อมูลลง Google Sheet
+            # ✅ บันทึกข้อมูลลง Google Sheet พร้อม QID
             log_to_sheets(user_id, user_message, reply_text, intent)
 
     return "OK", 200
-
 
 def send_reply(reply_token, message):
     url = "https://api.line.me/v2/bot/message/reply"
@@ -112,3 +118,4 @@ def send_reply(reply_token, message):
         ]
     }
     requests.post(url, headers=headers, json=payload)
+
