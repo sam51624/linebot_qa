@@ -54,4 +54,3 @@ def answer_question(user_message, user_id=None):
 
     return reply
 
-
