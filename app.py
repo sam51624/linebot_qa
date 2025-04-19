@@ -30,7 +30,7 @@ def webhook():
             if user_id not in chat_history:
                 chat_history[user_id] = []
             chat_history[user_id].append(user_message)
-            chat_history[user_id] = chat_history[user_id][-5:]
+            chat_history[user_id] = chat_history[user_id][-5:]  # จำกัดให้เก็บแค่ 5 ข้อความล่าสุด
 
             # ตรวจจับ Intent
             intent = detect_intent(user_message)
@@ -94,6 +94,7 @@ def webhook():
             log_to_sheets(user_id, user_message, reply_text, intent)
 
     return "OK", 200
+
 
 def send_reply(reply_token, message):
     url = "https://api.line.me/v2/bot/message/reply"
