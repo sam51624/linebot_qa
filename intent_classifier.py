@@ -1,16 +1,31 @@
+import openai
+import os
+
+# ดึง API Key จาก Environment Variable
+openai.api_key = os.getenv("OPENAI_API_KEY")
+
 def detect_intent(user_message):
-    message = user_message.lower()
+    try:
+        response = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {
+                    "role": "system",
+                    "content": "คุณคือระบบแยกประเภทคำถามลูกค้า (Intent Classification) สำหรับร้านคลองถมช้อปปิ้งมอลล์ ให้ตอบเพียง intent เดียวจากรายการนี้เท่านั้น: product_inquiry, order_request, price_inquiry, general_question, unknown. อย่าตอบอย่างอื่น"
+                },
+                {
+                    "role": "user",
+                    "content": f"ข้อความ: {user_message}"
+                }
+            ],
+            temperature=0.0  # คงที่เพื่อให้ผลลัพธ์แม่นยำเสมอ
+        )
 
-    if any(word in message for word in ["มีไหม", "มีมั้ย", "มีมั้ยคะ", "เหลือไหม", "เหลือมั้ย", "สินค้า", "รหัส"]):
-        return "product_inquiry"
+        intent = response.choices[0].message.content.strip()
+        print("🎯 INTENT by GPT:", intent)
+        return intent
 
-    if "ราคา" in message:
-        return "price_inquiry"
+    except Exception as e:
+        print("❌ Error in detect_intent:", str(e))
+        return "unknown"
 
-    if any(word in message for word in ["สั่งซื้อ", "สั่งได้ไหม", "สั่งทางนี้ได้มั้ย", "ซื้อได้ไหม", "สั่งทางนี้ได้มั้ย"]):
-        return "order_request"
-
-    if any(word in message for word in ["เปิด", "ปิด", "ติดต่อ", "เบอร์", "เวลา", "ที่อยู่", "แผนที่"]):
-        return "general_question"
-
-    return "unknown"
