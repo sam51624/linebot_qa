@@ -14,7 +14,7 @@ def detect_intent(user_message):
                     "content": (
                         "คุณคือระบบแยกประเภทคำถามลูกค้า (Intent Classification) สำหรับร้านคลองถมช้อปปิ้งมอลล์ "
                         "ให้ตอบเพียง intent เดียวจากรายการนี้เท่านั้น: "
-                        "product_inquiry, order_request, price_inquiry, general_question, store_location, contact_info, delivery_info, unknown. "
+                        "product_inquiry, order_request, price_inquiry, general_question, store_location, contact_info, delivery_info, payment_method, check_stock, unknown. "
                         "หากไม่แน่ใจให้ตอบว่า unknown เท่านั้น ห้ามตอบอย่างอื่น"
                     )
                 },
