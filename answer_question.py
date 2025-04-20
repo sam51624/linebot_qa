@@ -3,7 +3,6 @@ from vector_store import search_faiss
 from openai import OpenAI
 import os
 
-# ✅ กรณีที่ใช้ context vector + chat memory
 chat_history = {}
 client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 
@@ -11,16 +10,20 @@ system_message = """
 คุณคือพนักงานขายของร้านคลองถมช้อปปิ้งมอลล์ ให้ข้อมูลสินค้า ตอบคำถามลูกค้า และแนะนำสินค้าที่ใกล้เคียงได้อย่างมืออาชีพ
 """
 
+def normalize_text(text):
+    return text.strip().replace(" ", "").replace("-", "").lower()
+
 def answer_question(user_message, user_id=None):
-    # ✅ ลองค้นหาแบบตรงจาก Google Sheet ก่อน
-    result = search_products(user_message)
+    cleaned_message = normalize_text(user_message)
+
+    # ✅ ค้นหาโดยตรงจาก Google Sheet
+    result = search_products(cleaned_message)
     if "ไม่พบข้อมูลสินค้า" not in result:
         return result
 
-    # ✅ หากไม่เจอ → ค้นหาด้วย vector AI (คล้ายความหมาย)
-    context = search_faiss(user_message)
+    # ✅ หากไม่เจอ → ค้นหาแบบ vector ด้วย FAISS
+    context = search_faiss(cleaned_message)
     if context:
-        # เติมความเข้าใจจาก context + memory (optional)
         context = context[:2000]
         messages = [
             {"role": "system", "content": system_message},
@@ -45,9 +48,8 @@ def answer_question(user_message, user_id=None):
         if user_id:
             chat_history[user_id].append({"role": "assistant", "content": reply})
 
-        return f"ไม่พบข้อมูลตรงจากระบบสินค้า แต่พบรายการใกล้เคียง:\n\n{reply}"
+        return f"🔍 ไม่พบข้อมูลตรงจากระบบสินค้า แต่พบรายการใกล้เคียง:\n\n{reply}"
 
     return "ขออภัยค่ะ ไม่พบข้อมูลสินค้าที่คุณสอบถามมาเลยค่ะ 🙏"
-
 
 
