@@ -2,6 +2,7 @@ from flask import Flask, request
 from answer_question import answer_question
 from data_logger import log_to_sheets
 from intent_classifier import detect_intent
+from ocr_utils import extract_text_from_image
 
 import requests
 import os
