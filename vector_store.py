@@ -1,38 +1,27 @@
+from sentence_transformers import SentenceTransformer
+import faiss
+import pandas as pd
 from data_loader import load_data_from_sheet
 
-def search_faiss(query):
-    df = load_data_from_sheet()
-    result = []
+# โหลดข้อมูล + สร้าง vector index (โหลดครั้งเดียว)
+df = load_data_from_sheet()
+model = SentenceTransformer("all-MiniLM-L6-v2")
+corpus = df["ชื่อสินค้า"].astype(str).tolist()
+corpus_vectors = model.encode(corpus)
 
-    query_words = query.lower().split()
+index = faiss.IndexFlatL2(corpus_vectors[0].shape[0])
+index.add(corpus_vectors)
 
-    for _, row in df.iterrows():
-        searchable_text = " ".join([
-            str(row.get("ชื่อสินค้า", "")),
-            str(row.get("รหัสสินค้า", "")),
-            str(row.get("Tag", "")),
-            str(row.get("หมวดหมู่", "")),
-            str(row.get("หมวดหมู่ย่อย", "")),
-        ]).lower()
+def search_faiss(query, top_k=3):
+    query_vector = model.encode([query])
+    D, I = index.search(query_vector, top_k)
 
-        if any(word in searchable_text for word in query_words):
-            name = str(row.get("ชื่อสินค้า", "-"))
-            code = str(row.get("รหัสสินค้า", "-"))
-            tag = str(row.get("Tag", "-"))
-            price = str(row.get("ราคาขาย", "-"))
+    results = []
+    for i in I[0]:
+        if i < len(df):
+            row = df.iloc[i]
+            item_text = f"{row['ชื่อสินค้า']} (รหัส {row['รหัสสินค้า']}) - ราคา {row['ราคาขาย']} บาท"
+            results.append(item_text)
 
-            raw_qty = str(row.get("จำนวน", "0")).replace("(", "-").replace(")", "").replace(",", "")
-            try:
-                qty = float(raw_qty)
-            except:
-                qty = 0
-
-            stock_status = f"คงเหลือ {qty} ชิ้น" if qty > 0 else "สินค้าหมด"
-            item_text = f"{name} (รหัส {code}, Tag: {tag}) - ราคา {price} บาท - {stock_status}"
-            result.append(item_text)
-
-            if len(result) >= 10:  # ✅ จำกัดไม่เกิน 10 รายการ
-                break
-
-    return "\n".join(result) if result else "ขออภัยค่ะ ไม่พบข้อมูลสินค้าที่คุณสอบถามมาในระบบค่ะ"
+    return "\n".join(results)
 
