@@ -3,7 +3,7 @@ import re
 from google.cloud import vision
 
 # ✅ ตั้งค่าการเข้าถึง Service Account JSON
-os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = "credentials.json"
+os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = "/etc/secrets/credentials.json"
 
 def extract_sku_from_bytes(image_bytes):
     """รับข้อมูลภาพแบบ bytes แล้วตรวจจับรหัสสินค้า (SKU)"""
