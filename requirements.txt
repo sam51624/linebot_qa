@@ -5,3 +5,4 @@ gunicorn
 gspread
 oauth2client
 pandas
+google-cloud-vision
