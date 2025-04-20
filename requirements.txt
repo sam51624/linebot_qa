@@ -6,3 +6,5 @@ gspread
 oauth2client
 pandas
 google-cloud-vision
+sentence-transformers
+faiss-cpu
