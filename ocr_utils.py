@@ -1,20 +1,15 @@
+import os
 import re
 from google.cloud import vision
 
-def extract_sku_from_image_bytes(image_bytes):
-    """
-    วิเคราะห์ภาพด้วย OCR จาก Google Cloud Vision
-    และดึงรหัสสินค้า 6 หลักจากข้อความในภาพ
+# ✅ ตั้งค่าการเข้าถึง Service Account JSON
+os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = "credentials.json"
 
-    Args:
-        image_bytes (bytes): เนื้อหาภาพ
-
-    Returns:
-        list[str]: รหัสสินค้า เช่น ["000632", "123456"]
-    """
+def extract_sku_from_bytes(image_bytes):
+    """รับข้อมูลภาพแบบ bytes แล้วตรวจจับรหัสสินค้า (SKU)"""
     client = vision.ImageAnnotatorClient()
-    image = vision.Image(content=image_bytes)
 
+    image = vision.Image(content=image_bytes)
     response = client.text_detection(image=image)
     texts = response.text_annotations
 
@@ -22,9 +17,10 @@ def extract_sku_from_image_bytes(image_bytes):
         return []
 
     full_text = texts[0].description.strip()
-    print("🧠 OCR Text:", full_text)
+    print("📦 ข้อความที่อ่านได้จากภาพ:\n", full_text)
 
-    # ดึงรหัส 6 หลัก (ตัวเลข)
+    # ✅ ดึงเฉพาะรหัสสินค้า 6 หลัก เช่น 030216
     sku_list = re.findall(r"\b\d{6}\b", full_text)
 
     return sku_list
+
