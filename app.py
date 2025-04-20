@@ -2,10 +2,10 @@ from flask import Flask, request
 from answer_question import answer_question
 from data_logger import log_to_sheets
 from intent_classifier import detect_intent
-from ocr_utils import extract_sku_from_image_bytes
-
+from ocr_utils import extract_sku_from_bytes
 import requests
 import os
+import threading
 from hashlib import md5
 import time
 
@@ -17,9 +17,11 @@ chat_history = {}
 
 @app.route("/webhook", methods=["POST"])
 def webhook():
+    print("🚀 Webhook Triggered")
     event = request.get_json()
 
     if event is None or "events" not in event:
+        print("❌ Invalid payload")
         return "Bad Request", 400
 
     for e in event["events"]:
@@ -29,23 +31,23 @@ def webhook():
         user_id = e["source"]["userId"]
         reply_token = e["replyToken"]
 
-        # === ✉️ ข้อความตัวอักษร
         if e["message"]["type"] == "text":
             user_message = e["message"]["text"]
+            print(f"📩 Text from {user_id}: {user_message}")
 
-            # เก็บประวัติการสนทนา
-            chat_history.setdefault(user_id, []).append(user_message)
+            if user_id not in chat_history:
+                chat_history[user_id] = []
+            chat_history[user_id].append(user_message)
             chat_history[user_id] = chat_history[user_id][-5:]
 
-            # ตรวจจับ Intent
             intent = detect_intent(user_message)
             print("🎯 INTENT:", intent)
 
-            # สร้าง QID
             qid = "#Q" + md5((user_id + user_message + str(time.time())).encode()).hexdigest()[:6]
 
-            # ตอบกลับตาม Intent
-            if intent in ["product_inquiry", "price_inquiry", "check_stock"]:
+            if intent == "product_inquiry":
+                reply_text = answer_question(user_message, user_id)
+            elif intent == "price_inquiry":
                 reply_text = answer_question(user_message, user_id)
             elif intent == "order_request":
                 reply_text = "ขออภัยค่ะ ขณะนี้ยังไม่รองรับการสั่งซื้อผ่านไลน์ หากสนใจสามารถมาที่หน้าร้านคลองถมช้อปปิ้งมอลล์ได้เลยค่ะ"
@@ -71,6 +73,8 @@ def webhook():
                     "ร้านคลองถมช้อปปิ้งมอลล์ รับชำระเงินผ่าน:\n"
                     "- โอนบัญชีธนาคาร\n- พร้อมเพย์\n- เงินสดหน้าร้าน\n- บัตรเครดิต"
                 )
+            elif intent == "check_stock":
+                reply_text = answer_question(user_message, user_id)
             else:
                 reply_text = "ขออภัยค่ะ ไม่เข้าใจคำถาม หากต้องการสอบถามสินค้า กรุณาระบุรหัสหรือชื่อสินค้าอีกครั้งนะคะ 😊"
 
@@ -78,7 +82,6 @@ def webhook():
             send_reply(reply_token, reply_text)
             log_to_sheets(user_id, user_message, reply_text, intent)
 
-        # === 📸 กรณีเป็นภาพ
         elif e["message"]["type"] == "image":
             message_id = e["message"]["id"]
             image_url = f"https://api-data.line.me/v2/bot/message/{message_id}/content"
@@ -86,23 +89,34 @@ def webhook():
             image_response = requests.get(image_url, headers=headers)
 
             if image_response.status_code == 200:
-                image_bytes = image_response.content
-                sku_list = extract_sku_from_image_bytes(image_bytes)
+                print(f"🖼 รับภาพจาก {user_id} แล้ว เริ่ม OCR ด้วย Thread...")
 
-                if sku_list:
-                    responses = []
-                    for sku in sku_list:
-                        ai_response = answer_question(sku, user_id)
-                        responses.append(f"🔍 รหัส {sku}:\n{ai_response}")
-                    reply_text = "\n\n".join(responses)
-                else:
-                    reply_text = "ไม่พบรหัสสินค้าที่สามารถอ่านได้จากภาพค่ะ"
+                send_reply(reply_token, "📷 รับภาพเรียบร้อยแล้ว กำลังตรวจสอบข้อมูลสินค้า...")
 
-                send_reply(reply_token, reply_text)
-                log_to_sheets(user_id, "[รูปภาพ]", reply_text, "image_sku")
+                def process_image_async():
+                    try:
+                        image_bytes = image_response.content
+                        sku_list = extract_sku_from_bytes(image_bytes)
+                        print(f"🔍 SKU ที่ตรวจพบ: {sku_list}")
+
+                        if sku_list:
+                            responses = []
+                            for sku in sku_list:
+                                ai_response = answer_question(sku, user_id)
+                                responses.append(f"🔍 รหัส {sku}:\n{ai_response}")
+                            full_reply = "\n\n".join(responses)
+                        else:
+                            full_reply = "ไม่พบรหัสสินค้าที่สามารถอ่านได้จากภาพค่ะ"
+
+                        push_message(user_id, full_reply)
+                        log_to_sheets(user_id, "[รูปภาพ]", full_reply, "image_ocr")
+
+                    except Exception as e:
+                        print("❌ Error in OCR thread:", e)
+
+                threading.Thread(target=process_image_async).start()
 
     return "OK", 200
-
 
 def send_reply(reply_token, message):
     url = "https://api.line.me/v2/bot/message/reply"
@@ -112,11 +126,19 @@ def send_reply(reply_token, message):
     }
     payload = {
         "replyToken": reply_token,
-        "messages": [
-            {
-                "type": "text",
-                "text": message
-            }
-        ]
+        "messages": [{"type": "text", "text": message}]
     }
     requests.post(url, headers=headers, json=payload)
+
+def push_message(user_id, message):
+    url = "https://api.line.me/v2/bot/message/push"
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {LINE_CHANNEL_ACCESS_TOKEN}"
+    }
+    payload = {
+        "to": user_id,
+        "messages": [{"type": "text", "text": message}]
+    }
+    requests.post(url, headers=headers, json=payload)
+
