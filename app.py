@@ -8,9 +8,13 @@ import os
 import threading
 from hashlib import md5
 import time
+import json
 
 app = Flask(__name__)
 LINE_CHANNEL_ACCESS_TOKEN = os.environ.get("LINE_CHANNEL_ACCESS_TOKEN")
+
+if not LINE_CHANNEL_ACCESS_TOKEN:
+    raise Exception("❌ LINE_CHANNEL_ACCESS_TOKEN ไม่ถูกตั้งค่าใน Environment Variable")
 
 # เก็บประวัติการสนทนา
 chat_history = {}
@@ -18,7 +22,9 @@ chat_history = {}
 @app.route("/webhook", methods=["POST"])
 def webhook():
     print("🚀 Webhook Triggered")
+
     event = request.get_json()
+    print("📥 Event payload:", json.dumps(event, indent=2, ensure_ascii=False))
 
     if event is None or "events" not in event:
         print("❌ Invalid payload")
@@ -45,9 +51,7 @@ def webhook():
 
             qid = "#Q" + md5((user_id + user_message + str(time.time())).encode()).hexdigest()[:6]
 
-            if intent == "product_inquiry":
-                reply_text = answer_question(user_message, user_id)
-            elif intent == "price_inquiry":
+            if intent in ["product_inquiry", "price_inquiry", "check_stock"]:
                 reply_text = answer_question(user_message, user_id)
             elif intent == "order_request":
                 reply_text = "ขออภัยค่ะ ขณะนี้ยังไม่รองรับการสั่งซื้อผ่านไลน์ หากสนใจสามารถมาที่หน้าร้านคลองถมช้อปปิ้งมอลล์ได้เลยค่ะ"
@@ -73,8 +77,6 @@ def webhook():
                     "ร้านคลองถมช้อปปิ้งมอลล์ รับชำระเงินผ่าน:\n"
                     "- โอนบัญชีธนาคาร\n- พร้อมเพย์\n- เงินสดหน้าร้าน\n- บัตรเครดิต"
                 )
-            elif intent == "check_stock":
-                reply_text = answer_question(user_message, user_id)
             else:
                 reply_text = "ขออภัยค่ะ ไม่เข้าใจคำถาม หากต้องการสอบถามสินค้า กรุณาระบุรหัสหรือชื่อสินค้าอีกครั้งนะคะ 😊"
 
@@ -118,6 +120,7 @@ def webhook():
 
     return "OK", 200
 
+
 def send_reply(reply_token, message):
     print("📤 กำลังส่งข้อความกลับไปที่ LINE:")
     print("↪️ reply_token:", reply_token)
@@ -130,18 +133,18 @@ def send_reply(reply_token, message):
     }
     payload = {
         "replyToken": reply_token,
-        "messages": [
-            {
-                "type": "text",
-                "text": message
-            }
-        ]
+        "messages": [{"type": "text", "text": message}]
     }
-    response = requests.post(url, headers=headers, json=payload)
-    print("✅ LINE ตอบกลับ status code:", response.status_code)
-    print("🔁 LINE response text:", response.text)
+    try:
+        response = requests.post(url, headers=headers, json=payload)
+        print("✅ LINE ตอบกลับ status code:", response.status_code)
+        print("🔁 LINE response text:", response.text)
+    except Exception as e:
+        print("❌ Error sending LINE reply:", e)
+
 
 def push_message(user_id, message):
+    print("📨 Push message to", user_id)
     url = "https://api.line.me/v2/bot/message/push"
     headers = {
         "Content-Type": "application/json",
@@ -151,5 +154,9 @@ def push_message(user_id, message):
         "to": user_id,
         "messages": [{"type": "text", "text": message}]
     }
-    requests.post(url, headers=headers, json=payload)
-
+    try:
+        response = requests.post(url, headers=headers, json=payload)
+        print("📬 Push Status:", response.status_code)
+        print("📬 Push Response:", response.text)
+    except Exception as e:
+        print("❌ Error sending push:", e)
