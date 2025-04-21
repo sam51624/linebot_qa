@@ -25,5 +25,6 @@ RUN pip install -r requirements.txt
 ENV GOOGLE_APPLICATION_CREDENTIALS="/etc/secrets/credentials.json"
 
 # 🔹 8. Run ด้วย gunicorn และ bind ไปที่ $PORT (สำคัญกับ Cloud Run)
-CMD ["gunicorn", "-b", "0.0.0.0:$PORT", "app:app"]
+CMD ["gunicorn", "-b", "0.0.0.0:$PORT", "app:app"]  # ✅ ถูก
+
 
