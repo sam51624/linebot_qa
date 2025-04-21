@@ -119,6 +119,10 @@ def webhook():
     return "OK", 200
 
 def send_reply(reply_token, message):
+    print("📤 กำลังส่งข้อความกลับไปที่ LINE:")
+    print("↪️ reply_token:", reply_token)
+    print("📦 message:", message)
+
     url = "https://api.line.me/v2/bot/message/reply"
     headers = {
         "Content-Type": "application/json",
@@ -126,9 +130,16 @@ def send_reply(reply_token, message):
     }
     payload = {
         "replyToken": reply_token,
-        "messages": [{"type": "text", "text": message}]
+        "messages": [
+            {
+                "type": "text",
+                "text": message
+            }
+        ]
     }
-    requests.post(url, headers=headers, json=payload)
+    response = requests.post(url, headers=headers, json=payload)
+    print("✅ LINE ตอบกลับ status code:", response.status_code)
+    print("🔁 LINE response text:", response.text)
 
 def push_message(user_id, message):
     url = "https://api.line.me/v2/bot/message/push"
