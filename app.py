@@ -2,7 +2,7 @@ from flask import Flask, request
 from answer_question import answer_question
 from data_logger import log_to_sheets
 from intent_classifier import detect_intent
-from ocr_utils import extract_sku_from_bytes
+from ocr_utils import extract_info_from_image_bytes  # ← ใช้ฟังก์ชันใหม่นี้
 import requests
 import os
 import threading
@@ -16,18 +16,15 @@ LINE_CHANNEL_ACCESS_TOKEN = os.environ.get("LINE_CHANNEL_ACCESS_TOKEN")
 if not LINE_CHANNEL_ACCESS_TOKEN:
     raise Exception("❌ LINE_CHANNEL_ACCESS_TOKEN ไม่ถูกตั้งค่าใน Environment Variable")
 
-# เก็บประวัติการสนทนา
 chat_history = {}
 
 @app.route("/webhook", methods=["POST"])
 def webhook():
     print("🚀 Webhook Triggered")
-
     event = request.get_json()
     print("📥 Event payload:", json.dumps(event, indent=2, ensure_ascii=False))
 
     if event is None or "events" not in event:
-        print("❌ Invalid payload")
         return "Bad Request", 400
 
     for e in event["events"]:
@@ -54,29 +51,21 @@ def webhook():
             if intent in ["product_inquiry", "price_inquiry", "check_stock"]:
                 reply_text = answer_question(user_message, user_id)
             elif intent == "order_request":
-                reply_text = "ขออภัยค่ะ ขณะนี้ยังไม่รองรับการสั่งซื้อผ่านไลน์ หากสนใจสามารถมาที่หน้าร้านคลองถมช้อปปิ้งมอลล์ได้เลยค่ะ"
+                reply_text = "ขออภัยค่ะ ขณะนี้ยังไม่รองรับการสั่งซื้อผ่านไลน์..."
             elif intent == "general_question":
-                reply_text = "คุณสามารถติดต่อร้านคลองถมช้อปปิ้งมอลล์ ได้ที่หน้าร้าน หรือติดต่อผ่านเบอร์โทรที่ระบุไว้ในเพจค่ะ"
+                reply_text = "คุณสามารถติดต่อร้านคลองถมช้อปปิ้งมอลล์ ได้ที่หน้าร้าน..."
             elif intent == "store_location":
-                reply_text = "ร้านคลองถมช้อปปิ้งมอลล์ ตั้งอยู่ที่ 'ถนนนวลจันทร์ ซอย17' ค่ะ ดูแผนที่: https://www.google.com/maps/place/คลองถมช้อปปิ้งมอลล์"
+                reply_text = "ร้านคลองถมช้อปปิ้งมอลล์ ตั้งอยู่ที่ 'ถนนนวลจันทร์ ซอย17'..."
             elif intent == "contact_info":
                 reply_text = (
                     "คุณสามารถติดต่อร้านคลองถมช้อปปิ้งมอลล์ ได้ทาง:\n"
                     "- โทร: 02-1021772\n- Line ID: @kts-mall\n"
-                    "- Email: klongthomshopping@gmail.com\n- Facebook: https://www.facebook.com/ktsmall"
+                    "- Email: klongthomshopping@gmail.com"
                 )
             elif intent == "delivery_info":
-                reply_text = (
-                    "ร้านคลองถมช้อปปิ้งมอลล์ มีบริการจัดส่งทั่วประเทศผ่าน Kerry, Flash, ไปรษณีย์ไทย\n"
-                    "- ระยะเวลา 1–3 วันทำการ\n"
-                    "- ค่าจัดส่งตามน้ำหนัก/ขนาด\n"
-                    "- มีบริการเก็บเงินปลายทาง (COD) ได้ในวงเงินไม่เกิน 2000 บาทค่ะ"
-                )
+                reply_text = "มีบริการจัดส่งทั่วประเทศผ่าน Kerry, Flash, ไปรษณีย์ไทย..."
             elif intent == "payment_method":
-                reply_text = (
-                    "ร้านคลองถมช้อปปิ้งมอลล์ รับชำระเงินผ่าน:\n"
-                    "- โอนบัญชีธนาคาร\n- พร้อมเพย์\n- เงินสดหน้าร้าน\n- บัตรเครดิต"
-                )
+                reply_text = "รับชำระเงินผ่าน: โอน/พร้อมเพย์/เงินสด/บัตรเครดิต"
             else:
                 reply_text = "ขออภัยค่ะ ไม่เข้าใจคำถาม หากต้องการสอบถามสินค้า กรุณาระบุรหัสหรือชื่อสินค้าอีกครั้งนะคะ 😊"
 
@@ -92,24 +81,33 @@ def webhook():
 
             if image_response.status_code == 200:
                 print(f"🖼 รับภาพจาก {user_id} แล้ว เริ่ม OCR ด้วย Thread...")
-
                 send_reply(reply_token, "📷 รับภาพเรียบร้อยแล้ว กำลังตรวจสอบข้อมูลสินค้า...")
 
                 def process_image_async():
                     try:
                         image_bytes = image_response.content
-                        sku_list = extract_sku_from_bytes(image_bytes)
-                        print(f"🔍 SKU ที่ตรวจพบ: {sku_list}")
+                        extracted = extract_info_from_image_bytes(image_bytes)
+                        print("🔍 Extracted OCR info:", extracted)
 
-                        if sku_list:
-                            responses = []
-                            for sku in sku_list:
-                                ai_response = answer_question(sku, user_id)
-                                responses.append(f"🔍 รหัส {sku}:\n{ai_response}")
-                            full_reply = "\n\n".join(responses)
-                        else:
-                            full_reply = "ไม่พบรหัสสินค้าที่สามารถอ่านได้จากภาพค่ะ"
+                        if not extracted:
+                            push_message(user_id, "ไม่สามารถอ่านรหัสหรือชื่อสินค้าจากภาพได้ค่ะ")
+                            return
 
+                        responses = []
+                        for item in extracted:
+                            query_text = item["sku"] or item["name"]
+                            if not query_text:
+                                continue
+                            answer = answer_question(query_text, user_id)
+                            part = "🔍 "
+                            if item["sku"]:
+                                part += f"รหัส {item['sku']}"
+                            if item["name"]:
+                                part += f" | {item['name']}"
+                            part += f"\n{answer}"
+                            responses.append(part)
+
+                        full_reply = "\n\n".join(responses)
                         push_message(user_id, full_reply)
                         log_to_sheets(user_id, "[รูปภาพ]", full_reply, "image_ocr")
 
@@ -120,12 +118,7 @@ def webhook():
 
     return "OK", 200
 
-
 def send_reply(reply_token, message):
-    print("📤 กำลังส่งข้อความกลับไปที่ LINE:")
-    print("↪️ reply_token:", reply_token)
-    print("📦 message:", message)
-
     url = "https://api.line.me/v2/bot/message/reply"
     headers = {
         "Content-Type": "application/json",
@@ -138,13 +131,10 @@ def send_reply(reply_token, message):
     try:
         response = requests.post(url, headers=headers, json=payload)
         print("✅ LINE ตอบกลับ status code:", response.status_code)
-        print("🔁 LINE response text:", response.text)
     except Exception as e:
         print("❌ Error sending LINE reply:", e)
 
-
 def push_message(user_id, message):
-    print("📨 Push message to", user_id)
     url = "https://api.line.me/v2/bot/message/push"
     headers = {
         "Content-Type": "application/json",
@@ -157,6 +147,6 @@ def push_message(user_id, message):
     try:
         response = requests.post(url, headers=headers, json=payload)
         print("📬 Push Status:", response.status_code)
-        print("📬 Push Response:", response.text)
     except Exception as e:
         print("❌ Error sending push:", e)
+
