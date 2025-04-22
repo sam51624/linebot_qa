@@ -1,26 +1,45 @@
-import os
-import re
 from google.cloud import vision
+import io
+import re
 
-# ✅ ตั้งค่าการเข้าถึง Service Account JSON
-os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = "/etc/secrets/credentials.json"
-
-def extract_sku_from_bytes(image_bytes):
-    """รับข้อมูลภาพแบบ bytes แล้วตรวจจับรหัสสินค้า (SKU)"""
+def extract_text_from_image(image_bytes):
     client = vision.ImageAnnotatorClient()
-
     image = vision.Image(content=image_bytes)
+
     response = client.text_detection(image=image)
     texts = response.text_annotations
 
     if not texts:
-        return []
+        return "", []
 
-    full_text = texts[0].description.strip()
-    print("📦 ข้อความที่อ่านได้จากภาพ:\n", full_text)
+    full_text = texts[0].description
+    return full_text, texts
 
-    # ✅ ดึงเฉพาะรหัสสินค้า 6 หลัก เช่น 030216
-    sku_list = re.findall(r"\b\d{6}\b", full_text)
+def extract_sku_and_name_from_bytes(image_bytes):
+    text, _ = extract_text_from_image(image_bytes)
 
-    return sku_list
+    lines = text.splitlines()
+    sku_candidates = []
+    name_lines = []
 
+    for line in lines:
+        line = line.strip()
+
+        # หา SKU ด้วย regex
+        sku_match = re.findall(r'\b(0?\d{5,7})\b', line)
+        if sku_match:
+            sku_candidates.extend(sku_match)
+            continue
+
+        # ข้าม label ทั่วไป
+        if "SKU" in line.upper() or "CODE" in line.upper():
+            continue
+
+        # ชื่อสินค้า (อาจหลายบรรทัด)
+        name_lines.append(line)
+
+    # สมมุติว่า บรรทัดแรกๆ เป็นชื่อสินค้า
+    product_name = " ".join(name_lines[:2]) if name_lines else None
+    sku_list = list(set(sku_candidates))
+
+    return sku_list, product_name
