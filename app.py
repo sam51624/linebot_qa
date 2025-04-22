@@ -2,7 +2,7 @@ from flask import Flask, request
 from answer_question import answer_question
 from data_logger import log_to_sheets
 from intent_classifier import detect_intent
-from ocr_utils import extract_info_from_image_bytes  # ← ใช้ฟังก์ชันใหม่นี้
+from ocr_utils import extract_info_from_image_bytes
 import requests
 import os
 import threading
@@ -25,6 +25,7 @@ def webhook():
     print("📥 Event payload:", json.dumps(event, indent=2, ensure_ascii=False))
 
     if event is None or "events" not in event:
+        print("❌ Invalid payload")
         return "Bad Request", 400
 
     for e in event["events"]:
@@ -51,25 +52,46 @@ def webhook():
             if intent in ["product_inquiry", "price_inquiry", "check_stock"]:
                 reply_text = answer_question(user_message, user_id)
             elif intent == "order_request":
-                reply_text = "ขออภัยค่ะ ขณะนี้ยังไม่รองรับการสั่งซื้อผ่านไลน์..."
+                reply_text = "ขออภัยค่ะ ขณะนี้ยังไม่รองรับการสั่งซื้อผ่านไลน์ หากสนใจสามารถมาที่หน้าร้านคลองถมช้อปปิ้งมอลล์ได้เลยค่ะ"
             elif intent == "general_question":
-                reply_text = "คุณสามารถติดต่อร้านคลองถมช้อปปิ้งมอลล์ ได้ที่หน้าร้าน..."
+                reply_text = "คุณสามารถติดต่อร้านคลองถมช้อปปิ้งมอลล์ ได้ที่หน้าร้าน หรือติดต่อผ่านเบอร์โทรที่ระบุไว้ในเพจค่ะ"
             elif intent == "store_location":
-                reply_text = "ร้านคลองถมช้อปปิ้งมอลล์ ตั้งอยู่ที่ 'ถนนนวลจันทร์ ซอย17'..."
+                reply_text = "ร้านคลองถมช้อปปิ้งมอลล์ ตั้งอยู่ที่ 'ถนนนวลจันทร์ ซอย17' ค่ะ ดูแผนที่: https://www.google.com/maps/place/คลองถมช้อปปิ้งมอลล์"
             elif intent == "contact_info":
                 reply_text = (
-                    "คุณสามารถติดต่อร้านคลองถมช้อปปิ้งมอลล์ ได้ทาง:\n"
-                    "- โทร: 02-1021772\n- Line ID: @kts-mall\n"
-                    "- Email: klongthomshopping@gmail.com"
+                    "คุณสามารถติดต่อร้านคลองถมช้อปปิ้งมอลล์ ได้ทาง:
+"
+                    "- โทร: 02-1021772
+- Line ID: @kts-mall
+"
+                    "- Email: klongthomshopping@gmail.com
+- Facebook: https://www.facebook.com/ktsmall"
                 )
             elif intent == "delivery_info":
-                reply_text = "มีบริการจัดส่งทั่วประเทศผ่าน Kerry, Flash, ไปรษณีย์ไทย..."
+                reply_text = (
+                    "ร้านคลองถมช้อปปิ้งมอลล์ มีบริการจัดส่งทั่วประเทศผ่าน Kerry, Flash, ไปรษณีย์ไทย
+"
+                    "- ระยะเวลา 1–3 วันทำการ
+"
+                    "- ค่าจัดส่งตามน้ำหนัก/ขนาด
+"
+                    "- มีบริการเก็บเงินปลายทาง (COD) ได้ในวงเงินไม่เกิน 2000 บาทค่ะ"
+                )
             elif intent == "payment_method":
-                reply_text = "รับชำระเงินผ่าน: โอน/พร้อมเพย์/เงินสด/บัตรเครดิต"
+                reply_text = (
+                    "ร้านคลองถมช้อปปิ้งมอลล์ รับชำระเงินผ่าน:
+"
+                    "- โอนบัญชีธนาคาร
+- พร้อมเพย์
+- เงินสดหน้าร้าน
+- บัตรเครดิต"
+                )
             else:
                 reply_text = "ขออภัยค่ะ ไม่เข้าใจคำถาม หากต้องการสอบถามสินค้า กรุณาระบุรหัสหรือชื่อสินค้าอีกครั้งนะคะ 😊"
 
-            reply_text += f"\n\n{qid}"
+            reply_text += f"
+
+{qid}"
             send_reply(reply_token, reply_text)
             log_to_sheets(user_id, user_message, reply_text, intent)
 
@@ -80,43 +102,56 @@ def webhook():
             image_response = requests.get(image_url, headers=headers)
 
             if image_response.status_code == 200:
-                print(f"🖼 รับภาพจาก {user_id} แล้ว เริ่ม OCR ด้วย Thread...")
-                send_reply(reply_token, "📷 รับภาพเรียบร้อยแล้ว กำลังตรวจสอบข้อมูลสินค้า...")
+                send_reply(reply_token, "📷 รับภาพเรียบร้อยแล้ว กำลังโหลดข้อมูลสินค้า...")
+                threading.Thread(target=process_image_async, args=(e,)).start()
 
-                def process_image_async():
-                    try:
-                        image_bytes = image_response.content
-                        extracted = extract_info_from_image_bytes(image_bytes)
-                        print("🔍 Extracted OCR info:", extracted)
+    return "OK", 200
 
-                        if not extracted:
-                            push_message(user_id, "ไม่สามารถอ่านรหัสหรือชื่อสินค้าจากภาพได้ค่ะ")
-                            return
+def process_image_async(event):
+    try:
+        user_id = event["source"]["userId"]
+        message_id = event["message"]["id"]
+        image_url = f"https://api-data.line.me/v2/bot/message/{message_id}/content"
+        headers = {"Authorization": f"Bearer {LINE_CHANNEL_ACCESS_TOKEN}"}
+        image_response = requests.get(image_url, headers=headers)
 
-                        responses = []
-                        for item in extracted:
-                            query_text = item["sku"] or item["name"]
-                            if not query_text:
-                                continue
-                            answer = answer_question(query_text, user_id)
-                            part = "🔍 "
-                            if item["sku"]:
-                                part += f"รหัส {item['sku']}"
-                            if item["name"]:
-                                part += f" | {item['name']}"
-                            part += f"\n{answer}"
-                            responses.append(part)
+        if image_response.status_code != 200 or not image_response.content:
+            push_message(user_id, "ไม่สามารถโหลดภาพได้ หรือภาพไม่มีข้อมูล 😢")
+            return
 
-                        full_reply = "\n\n".join(responses)
-                        push_message(user_id, full_reply)
-                        log_to_sheets(user_id, "[รูปภาพ]", full_reply, "image_ocr")
+        image_bytes = image_response.content
+        extracted_info = extract_info_from_image_bytes(image_bytes)
+        print("🧠 ข้อมูล OCR:", extracted_info)
 
-                    except Exception as e:
-                        print("❌ Error in OCR thread:", e)
+        if not extracted_info:
+            push_message(user_id, "ไม่พบข้อมูลรหัสหรือชื่อสินค้าจากภาพที่ส่งมาค่ะ")
+            return
 
-       # ตอบ LINE กลับทันที           
-       threading.Thread(target=process_image_async, args=(event,)).start()
-       return "OK", 200
+        responses = []
+        for info in extracted_info:
+            sku = info.get("sku")
+            name = info.get("name")
+            query = sku if sku else name
+            ai_response = answer_question(query, user_id)
+            if sku and name:
+                responses.append(f"🔍 รหัส {sku} ({name}):
+{ai_response}")
+            elif sku:
+                responses.append(f"🔍 รหัส {sku}:
+{ai_response}")
+            elif name:
+                responses.append(f"🔍 สินค้า {name}:
+{ai_response}")
+
+        full_reply = "
+
+".join(responses)
+        push_message(user_id, full_reply)
+        log_to_sheets(user_id, "[รูปภาพ]", full_reply, "image_ocr")
+
+    except Exception as e:
+        print("❌ Error in OCR thread:", e)
+        push_message(user_id, "เกิดข้อผิดพลาดระหว่างการประมวลผลภาพค่ะ 😥")
 
 def send_reply(reply_token, message):
     url = "https://api.line.me/v2/bot/message/reply"
@@ -130,7 +165,7 @@ def send_reply(reply_token, message):
     }
     try:
         response = requests.post(url, headers=headers, json=payload)
-        print("✅ LINE ตอบกลับ status code:", response.status_code)
+        print("✅ LINE ตอบกลับ:", response.status_code)
     except Exception as e:
         print("❌ Error sending LINE reply:", e)
 
@@ -149,4 +184,3 @@ def push_message(user_id, message):
         print("📬 Push Status:", response.status_code)
     except Exception as e:
         print("❌ Error sending push:", e)
-
