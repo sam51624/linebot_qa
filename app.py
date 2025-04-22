@@ -114,9 +114,9 @@ def webhook():
                     except Exception as e:
                         print("❌ Error in OCR thread:", e)
 
-                threading.Thread(target=process_image_async).start()
-
-    return "OK", 200
+       # ตอบ LINE กลับทันที           
+       threading.Thread(target=process_image_async, args=(event,)).start()
+       return "OK", 200
 
 def send_reply(reply_token, message):
     url = "https://api.line.me/v2/bot/message/reply"
