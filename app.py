@@ -74,30 +74,34 @@ def webhook():
                 reply_line(reply_token, message)
 
             # --- ถ้าเป็นรูปภาพ
-            elif event["message"]["type"] == "image":
-               image_id = event["message"]["id"]
-               image_bytes = get_line_image(image_id)
-               results = extract_text_from_image(image_bytes)  # คืนค่าเป็น list ของ dict
+elif event["message"]["type"] == "image":
+    image_id = event["message"]["id"]
+    image_bytes = get_line_image(image_id)
+    results = extract_text_from_image(image_bytes)
 
-               if results:
-                   sku = results[0].get("sku")
-                   name = results[0].get("name")
-                   intent = "search_product"  # หรือ classify_intent(name) ถ้าต้องการวิเคราะห์จากชื่อ
+    if results:
+        sku = results[0].get("sku")
+        name = results[0].get("name")
+        intent = "search_product"
 
-                   if sku:
-                       product = search_product_by_sku(sku)
-                       if product:
-                           message = format_product_reply(product)
-                       else:
-                           message = f"ขออภัยค่ะ ไม่พบข้อมูลสินค้าจากรหัส {sku} ที่พบในภาพค่ะ"
-                    elif name:
-                        message = f"ระบบตรวจพบชื่อสินค้า: {name} \nแต่ยังไม่มีรหัสสินค้า กรุณาส่งรหัสอีกครั้งค่ะ 🙏"
-                    else:
-                        message = "ขออภัยค่ะ ระบบไม่สามารถอ่านข้อมูลจากภาพได้ค่ะ 😥"
-                else:
-                    message = "ไม่สามารถดึงข้อมูลจากภาพได้เลยค่ะ 😔"
+        if sku:
+            product = search_product_by_sku(sku)
+            if product:
+                message = format_product_reply(product)
+            else:
+                message = f"ขออภัยค่ะ ไม่พบข้อมูลสินค้าจากรหัส {sku} ที่พบในภาพค่ะ"
 
-                reply_line(reply_token, message)
+        elif name:
+            message = f"ระบบตรวจพบชื่อสินค้า: {name} \nแต่ยังไม่มีรหัสสินค้า กรุณาส่งรหัสอีกครั้งค่ะ 🙏"
+
+        else:
+            message = "ขออภัยค่ะ ระบบไม่สามารถอ่านข้อมูลจากภาพได้ค่ะ 😥"
+
+    else:
+        message = "ไม่สามารถดึงข้อมูลจากภาพได้เลยค่ะ 😔"
+
+    reply_line(reply_token, message)
+
 
     return "OK", 200
 
