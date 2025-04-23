@@ -8,7 +8,7 @@ import base64
 app = Flask(__name__)
 
 # LINE API Credentials
-LINE_CHANNEL_ACCESS_TOKEN = "YOUR_LINE_CHANNEL_ACCESS_TOKEN"
+LINE_CHANNEL_ACCESS_TOKEN = "qwzQAyLRTVcsHmcxBUvyrSojIDdxm4tO8Wl/LWEtfUARGP/ntFGSblJL/wM958SoBnyWRFtWK13Un6hcZxXk/BqM8H5FjjJpT40orkVVLJeoKCk6Aebsu8yPT4Yw+9lOV8ZWnklsQ5ueLSsIkNBCowdB04t89/1O/w1cDnyilFU="
 LINE_REPLY_ENDPOINT = "https://api.line.me/v2/bot/message/reply"
 LINE_CONTENT_ENDPOINT = "https://api-data.line.me/v2/bot/message/{}/content"
 
