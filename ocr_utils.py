@@ -5,7 +5,7 @@ from google.cloud import vision
 # ✅ ระบุ path ไปยัง service account credentials (จะถูก mount ไว้ใน Cloud Run)
 os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = "/etc/secrets/credentials.json"
 
-def extract_info_from_image_bytes(image_bytes):
+def extract_text_from_image(image_bytes):
     client = vision.ImageAnnotatorClient()
 
     image = vision.Image(content=image_bytes)
