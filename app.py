@@ -8,11 +8,11 @@ import base64
 app = Flask(__name__)
 
 # LINE API Credentials
-LINE_CHANNEL_ACCESS_TOKEN = "qwzQAyLRTVcsHmcxBUvyrSojIDdxm4tO8Wl/LWEtfUARGP/ntFGSblJL/wM958SoBnyWRFtWK13Un6hcZxXk/BqM8H5FjjJpT40orkVVLJeoKCk6Aebsu8yPT4Yw+9lOV8ZWnklsQ5ueLSsIkNBCowdB04t89/1O/w1cDnyilFU="
+LINE_CHANNEL_ACCESS_TOKEN = "YOUR_LINE_CHANNEL_ACCESS_TOKEN"
 LINE_REPLY_ENDPOINT = "https://api.line.me/v2/bot/message/reply"
 LINE_CONTENT_ENDPOINT = "https://api-data.line.me/v2/bot/message/{}/content"
 
-# ------------- Intent Classification -------------
+# ----------- Intent Classification -----------
 def classify_intent(text: str) -> str:
     text = text.lower()
     if "ใบเสนอราคา" in text or "quote" in text or "เสนอราคา" in text:
@@ -22,7 +22,7 @@ def classify_intent(text: str) -> str:
     else:
         return "search_product"
 
-# ------------- ตอบกลับไปที่ LINE -------------
+# ----------- ตอบกลับ LINE -----------
 def reply_line(reply_token, message):
     headers = {
         "Content-Type": "application/json",
@@ -34,7 +34,7 @@ def reply_line(reply_token, message):
     }
     requests.post(LINE_REPLY_ENDPOINT, headers=headers, data=json.dumps(body))
 
-# ------------- โหลดภาพจาก LINE -------------
+# ----------- โหลดภาพจาก LINE -----------
 def get_line_image(message_id):
     headers = {
         "Authorization": f"Bearer {LINE_CHANNEL_ACCESS_TOKEN}"
@@ -43,7 +43,7 @@ def get_line_image(message_id):
     response = requests.get(url, headers=headers)
     return response.content
 
-# ------------- Webhook หลัก -------------
+# ----------- Webhook หลัก -----------
 @app.route("/webhook", methods=["POST"])
 def webhook():
     event_data = request.json
@@ -51,7 +51,7 @@ def webhook():
         if event["type"] == "message":
             reply_token = event["replyToken"]
 
-            # --- ถ้าเป็นข้อความ
+            # --- ข้อความ (Text)
             if event["message"]["type"] == "text":
                 user_text = event["message"]["text"].strip()
                 intent = classify_intent(user_text)
@@ -73,35 +73,34 @@ def webhook():
 
                 reply_line(reply_token, message)
 
-            # --- ถ้าเป็นรูปภาพ
-elif event["message"]["type"] == "image":
-    image_id = event["message"]["id"]
-    image_bytes = get_line_image(image_id)
-    results = extract_text_from_image(image_bytes)
+            # --- รูปภาพ (Image)
+            elif event["message"]["type"] == "image":
+                image_id = event["message"]["id"]
+                image_bytes = get_line_image(image_id)
+                results = extract_text_from_image(image_bytes)
 
-    if results:
-        sku = results[0].get("sku")
-        name = results[0].get("name")
-        intent = "search_product"
+                if results:
+                    sku = results[0].get("sku")
+                    name = results[0].get("name")
+                    intent = "search_product"
 
-        if sku:
-            product = search_product_by_sku(sku)
-            if product:
-                message = format_product_reply(product)
-            else:
-                message = f"ขออภัยค่ะ ไม่พบข้อมูลสินค้าจากรหัส {sku} ที่พบในภาพค่ะ"
+                    if sku:
+                        product = search_product_by_sku(sku)
+                        if product:
+                            message = format_product_reply(product)
+                        else:
+                            message = f"ขออภัยค่ะ ไม่พบข้อมูลสินค้าจากรหัส {sku} ที่พบในภาพค่ะ"
 
-        elif name:
-            message = f"ระบบตรวจพบชื่อสินค้า: {name} \nแต่ยังไม่มีรหัสสินค้า กรุณาส่งรหัสอีกครั้งค่ะ 🙏"
+                    elif name:
+                        message = f"ระบบตรวจพบชื่อสินค้า: {name} \nแต่ยังไม่มีรหัสสินค้า กรุณาส่งรหัสอีกครั้งค่ะ 🙏"
 
-        else:
-            message = "ขออภัยค่ะ ระบบไม่สามารถอ่านข้อมูลจากภาพได้ค่ะ 😥"
+                    else:
+                        message = "ขออภัยค่ะ ระบบไม่สามารถอ่านข้อมูลจากภาพได้ค่ะ 😥"
+                else:
+                    message = "ไม่สามารถดึงข้อมูลจากภาพได้เลยค่ะ 😔"
 
-    else:
-        message = "ไม่สามารถดึงข้อมูลจากภาพได้เลยค่ะ 😔"
-
-    reply_line(reply_token, message)
-
+                reply_line(reply_token, message)
 
     return "OK", 200
+
 
