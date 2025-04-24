@@ -1,9 +1,9 @@
 import requests
 
 ZORT_API_URL = "https://open-api.zortout.com/v4"
-ZORT_API_KEY = "YOUR_API_KEY"
-ZORT_API_SECRET = "YOUR_API_SECRET"
-STORE_NAME = "YOUR_EMAIL"
+ZORT_API_KEY = "78M7bVcPOWWk1Tcx0MhEjsAg3UrJuikhLtg0F6gBJHo="
+ZORT_API_SECRET = "AsL9e8EfmGpt5JlMnxgOUjFRX4P974wUPS7WvcG1xI="
+STORE_NAME = "klongthomshopping@gmail.com"
 
 def get_access_token():
     url = f"{ZORT_API_URL}/token"
