@@ -1,9 +1,9 @@
 import requests
 
 ZORT_API_URL = "https://open-api.zortout.com/v4"
-ZORT_API_KEY = "qQGfmDGZmbjzuYSfPvEE/8f/qBuB7zLbvG8GmKdtM0="
-ZORT_API_SECRET = "RC7XffROdRWR/KbziFEdXKHQmhkks3RNwvGcIUZoZ38="
-STORE_NAME = "klongthomshopping@gmail.com"
+ZORT_API_KEY = "YOUR_API_KEY"
+ZORT_API_SECRET = "YOUR_API_SECRET"
+STORE_NAME = "YOUR_EMAIL"
 
 def get_access_token():
     url = f"{ZORT_API_URL}/token"
@@ -18,25 +18,28 @@ def get_access_token():
     return data["accessToken"]
 
 def search_product_by_sku(sku: str):
-    token = get_access_token()
-    url = f"{ZORT_API_URL}/product/search"
-    headers = {
-        "Authorization": f"Bearer {token}"
-    }
-    params = {
-        "keyword": sku,
-        "page": 1,
-        "limit": 1
-    }
+    try:
+        token = get_access_token()
+        url = f"{ZORT_API_URL}/product/search"
+        headers = {
+            "Authorization": f"Bearer {token}"
+        }
+        params = {
+            "keyword": sku,
+            "page": 1,
+            "limit": 1
+        }
+        response = requests.get(url, headers=headers, params=params)
+        response.raise_for_status()
+        data = response.json()
 
-    response = requests.get(url, headers=headers, params=params)
-    response.raise_for_status()
-    data = response.json()
+        if data.get("status") != "success" or not data.get("data"):
+            return None
 
-    if data.get("status") != "success" or not data.get("data"):
+        return data["data"][0]  # ดึงสินค้าตัวแรก
+    except Exception as e:
+        print(f"❌ ไม่สามารถเชื่อมต่อ Zort API: {e}")
         return None
-
-    return data["data"][0]  # ดึงสินค้าตัวแรกที่ตรงกับ SKU
 
 def format_product_reply(product):
     sku = product.get("code", "ไม่ระบุ")
@@ -46,5 +49,5 @@ def format_product_reply(product):
     return f"""🔎 รหัสสินค้า: {sku}
 📦 ชื่อสินค้า: {name}
 💰 ราคาขาย: {price} บาท
-📌 ราคานี้ยังไม่รวมค่าจัดส่งสินค้าและภาษี Vat"""
+📌 ราคานี้ยังไม่รวมค่าจัดส่งสินค้าและภาษี Vat 7%"""
 
