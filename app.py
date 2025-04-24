@@ -4,6 +4,7 @@ import requests
 from zort_api_utils import search_product_by_sku, format_product_reply
 from ocr_utils import extract_text_from_image
 import base64
+from welcome_handler import is_greeting, generate_greeting_message
 
 app = Flask(__name__)
 
@@ -11,6 +12,18 @@ app = Flask(__name__)
 LINE_CHANNEL_ACCESS_TOKEN = "qwzQAyLRTVcsHmcxBUvyrSojIDdxm4tO8Wl/LWEtfUARGP/ntFGSblJL/wM958SoBnyWRFtWK13Un6hcZxXk/BqM8H5FjjJpT40orkVVLJeoKCk6Aebsu8yPT4Yw+9lOV8ZWnklsQ5ueLSsIkNBCowdB04t89/1O/w1cDnyilFU="
 LINE_REPLY_ENDPOINT = "https://api.line.me/v2/bot/message/reply"
 LINE_CONTENT_ENDPOINT = "https://api-data.line.me/v2/bot/message/{}/content"
+
+if event["message"]["type"] == "text":
+    user_text = event["message"]["text"].strip()
+
+    # ✅ เช็คว่าข้อความเป็นคำทักทาย
+    if is_greeting(user_text):
+        message = generate_greeting_message()
+        reply_line(reply_token, message)
+        return "OK", 200
+
+    # จากนั้นค่อยวิเคราะห์ intent ตามปกติ
+    intent = classify_intent(user_text)
 
 # ----------- Intent Classification -----------
 def classify_intent(text: str) -> str:
