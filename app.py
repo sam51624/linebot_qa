@@ -3,7 +3,7 @@ import json
 import requests
 from zort_api_utils import search_product_by_sku, format_product_reply
 from ocr_utils import extract_text_from_image
-from welcome_handler import is_greeting, generate_greeting_message
+from welcome_handler import is_greeting, generate_greeting_message, is_new_user, mark_user_greeted  # ✅ นำเข้าเพิ่ม
 
 app = Flask(__name__)
 
@@ -12,14 +12,7 @@ LINE_CHANNEL_ACCESS_TOKEN = "qwzQAyLRTVcsHmcxBUvyrSojIDdxm4tO8Wl/LWEtfUARGP/ntFG
 LINE_REPLY_ENDPOINT = "https://api.line.me/v2/bot/message/reply"
 LINE_CONTENT_ENDPOINT = "https://api-data.line.me/v2/bot/message/{}/content"
 
-# In-memory set สำหรับจำว่า user คนไหนเคยได้รับข้อความทักทายแล้ว
-GREETED_USERS = set()
-
-def is_new_user(user_id: str) -> bool:
-    return user_id not in GREETED_USERS
-
-def mark_user_greeted(user_id: str):
-    GREETED_USERS.add(user_id)
+# ✅ (ลบฟังก์ชัน is_new_user / mark_user_greeted เดิมออกไป)
 
 # ----------- Intent Classification -----------
 def classify_intent(text: str) -> str:
