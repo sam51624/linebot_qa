@@ -15,11 +15,13 @@ LINE_CONTENT_ENDPOINT = "https://api-data.line.me/v2/bot/message/{}/content"
 
 if event["message"]["type"] == "text":
     user_text = event["message"]["text"].strip()
+    user_id = event["source"].get("userId")
 
-    # ✅ เช็คว่าข้อความเป็นคำทักทาย
-    if is_greeting(user_text):
+    # ✅ เช็คว่าทักทาย และยังไม่เคยตอบ
+    if is_greeting(user_text) and user_id and is_new_user(user_id):
         message = generate_greeting_message()
         reply_line(reply_token, message)
+        mark_user_greeted(user_id)
         return "OK", 200
 
     # จากนั้นค่อยวิเคราะห์ intent ตามปกติ
