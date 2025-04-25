@@ -4,6 +4,8 @@ import requests
 from zort_api_utils import search_product_by_sku, format_product_reply
 from ocr_utils import extract_text_from_image
 from welcome_handler import is_greeting, generate_greeting_message, is_new_user, mark_user_greeted
+from db_utils import get_product_by_sku  # ส่วนบนสุดของ app.py
+
 
 app = Flask(__name__)
 
