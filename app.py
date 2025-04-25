@@ -1,11 +1,9 @@
 from flask import Flask, request
 import json
 import requests
-from zort_api_utils import search_product_by_sku, format_product_reply
 from ocr_utils import extract_text_from_image
 from welcome_handler import is_greeting, generate_greeting_message, is_new_user, mark_user_greeted
-from db_utils import get_product_by_sku  # ส่วนบนสุดของ app.py
-
+from db_utils import get_product_by_sku  # ✅ ใช้ PostgreSQL
 
 app = Flask(__name__)
 
@@ -64,17 +62,18 @@ def webhook():
                 intent = classify_intent(user_text)
                 print(f"[INTENT] {intent}")
 
-                if intent == "search_product":
-                    product = search_product_by_sku(user_text)
-                    message = format_product_reply(product) if product else "ขออภัยค่ะ ไม่พบข้อมูลสินค้าที่คุณสอบถามมาเลยค่ะ 🙏"
-
-                elif intent == "check_stock":
-                    product = search_product_by_sku(user_text)
+                if intent in ["search_product", "check_stock"]:
+                    product = get_product_by_sku(user_text)
                     if product:
-                        stock = product.get("quantity", "ไม่ระบุ")
-                        message = f"🔎 รหัส: {product['code']}\n📦 สินค้า: {product['name']}\n📊 คงเหลือ: {stock} ชิ้น"
+                        stock = product.stock_quantity or 0
+                        message = (
+                            f"🔎 รหัส: {product.sku}\n"
+                            f"📦 สินค้า: {product.name}\n"
+                            f"💰 ราคา: {product.price} บาท\n"
+                            f"📊 คงเหลือ: {stock} ชิ้น"
+                        )
                     else:
-                        message = "ไม่พบข้อมูลสินค้าที่จะตรวจสอบคงเหลือค่ะ"
+                        message = "ขออภัยค่ะ ไม่พบข้อมูลสินค้าที่คุณสอบถามมาเลยค่ะ 🙏"
 
                 elif intent == "quotation":
                     message = "📄 หากคุณต้องการใบเสนอราคา กรุณาระบุรหัสสินค้าและจำนวน แล้วเราจะจัดทำให้โดยเร็วค่ะ 🙏"
@@ -97,15 +96,18 @@ def webhook():
                     print(f"[OCR] sku: {sku}, name: {name}")
 
                     if sku:
-                        product = search_product_by_sku(sku)
+                        product = get_product_by_sku(sku)
                         if product:
-                            message = format_product_reply(product)
+                            message = (
+                                f"🔎 รหัส: {product.sku}\n"
+                                f"📦 สินค้า: {product.name}\n"
+                                f"💰 ราคา: {product.price} บาท\n"
+                                f"📊 คงเหลือ: {product.stock_quantity} ชิ้น"
+                            )
                         else:
-                            message = f"🚫 ระบบยังไม่สามารถเชื่อมต่อข้อมูลจาก Zort ได้ในขณะนี้ หรือไม่พบรหัส {sku} ค่ะ"
-
+                            message = f"❌ ไม่พบรหัสสินค้า {sku} ในระบบค่ะ"
                     elif name:
                         message = f"ระบบตรวจพบชื่อสินค้า: {name} \nแต่ยังไม่มีรหัสสินค้า กรุณาส่งรหัสอีกครั้งค่ะ 🙏"
-
                     else:
                         message = "ขออภัยค่ะ ระบบไม่สามารถอ่านข้อมูลจากภาพได้ค่ะ 😥"
                 else:
@@ -115,4 +117,5 @@ def webhook():
                 reply_line(reply_token, message)
 
     return "OK", 200
+
 
