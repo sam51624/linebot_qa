@@ -4,6 +4,7 @@ import requests
 from ocr_utils import extract_text_from_image
 from welcome_handler import is_greeting, generate_greeting_message, is_new_user, mark_user_greeted
 from db_utils import get_product_by_sku  # ✅ ใช้ PostgreSQL
+from product_api import product_api
 
 app = Flask(__name__)
 
