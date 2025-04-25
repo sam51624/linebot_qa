@@ -119,4 +119,5 @@ def webhook():
 
     return "OK", 200
 
-
+# ✅ Register blueprint ที่นี่ (นอกฟังก์ชัน)
+app.register_blueprint(product_api)
