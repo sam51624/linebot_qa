@@ -121,8 +121,106 @@ pip install -r requirements.txt
 
 ---
 
+# 📄 KTS Mini API - Product Management System
+
+## 🔍 Overview
+API สร้างมาเพื่อจัดการข้อมูลสินค้าในระบบ `kts-mini-db` (Google Cloud SQL - PostgreSQL) โดยพัฒนาและ Deploy ด้วย Python, Flask, SQLAlchemy และ Gunicorn บน Google Cloud Run
+
+## 🔄 Architecture
+- 🔢 **Database**: Google Cloud SQL (PostgreSQL 16)
+- 💻 **Backend**: Flask + SQLAlchemy
+- 🛠️ **Hosting**: Google Cloud Run
+- 👀 **API Testing**: Hoppscotch / curl
+
+## ✨ Supported APIs
+
+### 1. POST `/products`
+**➜ เพิ่มสินค้าใหม่ลงฐานข้อมูล**
+
+#### Body (JSON)
+```json
+{
+  "sku": "MOTOR001",
+  "name": "มอเตอร์เกียร์ 12V",
+  "description": "มอเตอร์เกียร์ขนาดเล็ก ใช้งานทั่วไป",
+  "category": "มอเตอร์",
+  "cost_price": 100.0,
+  "price": 180.0,
+  "stock_quantity": 10,
+  "available_stock": 10,
+  "image_url": "https://example.com/motor.jpg"
+}
+```
+
+#### Response
+```json
+{
+  "message": "เพิ่มสินค้าสำเร็จ ✅"
+}
+```
+
+---
+
+### 2. GET `/products`
+**➜ ดึงข้อมูลสินค้าทั้งหมด**
+
+#### Response (ตัวอย่าง)
+```json
+[
+  {
+    "sku": "MOTOR001",
+    "name": "มอเตอร์เกียร์ 12V",
+    "price": 180.0,
+    "stock_quantity": 10
+  },
+  {
+    "sku": "MOTOR002",
+    "name": "มอเตอร์เกียร์ 24V",
+    "price": 280.0,
+    "stock_quantity": 15
+  }
+]
+```
+
+---
+
+## 🚀 Deployment ขั้นตอน
+1. แก้ไข `requirements.txt` ให้ครบถ้วน (เพิ่ม `flask`, `gunicorn`, `sqlalchemy`, `flask_cors`, etc.)
+2. ใช้ `Dockerfile` เพื่อ Build Image
+3. Deploy ขึ้น Google Cloud Run (Region: asia-southeast1)
+4. กำหนด `Permissions` ให้ `AllUsers` มีสิทธิ์ Invoke
+5. เชื่อมต่อกับ Cloud SQL Instance ผ่าน Public IP
+
+---
+
+## 🌐 API URL ใช้งาน
+> https://kts-line-ai-401449838597.asia-southeast1.run.app/products
+
+---
+
+## 📊 อัปเดตล่าสุด
+- ✅ เพิ่มระบบ Unique SKU Constraint
+- ✅ เพิ่ม CORS รองรับการเรียกจาก Frontend ภายนอก
+- ✅ จัดรูปแบบข้อความภาษาไทยรองรับ API Response
+
+---
+
+## 🛠️ TODOs ต่อไป
+- [ ] GET `/products/{sku}` ➜ ดึงเฉพาะ SKU
+- [ ] PATCH `/products/{sku}` ➜ อัปเดตข้อมูลสินค้า
+- [ ] DELETE `/products/{sku}` ➜ ลบสินค้า
+- [ ] ค้นหาสินค้าตาม keyword
+- [ ] เชื่อมกับ LINE OA ➜ ค้นหาสินค้าตอบลูกค้า
+
+---
+
+> Made with ❤️ by Sam51624 & ChatGPT
+
+---
+
 ## 📬 ติดต่อผู้พัฒนา
 
 > LINE: @yourlineid  
 > GitHub: github.com/yourname  
 > Cloud Run URL: [https://kts-line-ai-xxxxxxxxxx.run.app](#)
+
