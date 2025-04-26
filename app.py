@@ -7,6 +7,7 @@ from ocr_utils import extract_text_from_image
 from welcome_handler import is_greeting, generate_greeting_message, is_new_user, mark_user_greeted
 from db_utils import get_product_by_sku
 from product_api import product_api
+from order_api import order_api
 
 app = Flask(__name__)
 CORS(app)
@@ -101,3 +102,5 @@ def webhook():
     return "OK", 200
 
 app.register_blueprint(product_api)
+app.register_blueprint(order_api)
+
