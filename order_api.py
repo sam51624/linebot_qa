@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify
 from db_utils import create_order, get_or_create_customer_by_line_id
-from db_models import Customer   # ✅ เพิ่มบรรทัดนี้
+from db_models import Customer, Order, OrderItem  # <-- ✅ ต้อง import มาด้วย
 from sqlalchemy.exc import SQLAlchemyError
 from db_config import SessionLocal
 
