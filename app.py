@@ -1,12 +1,14 @@
 from flask import Flask, request
+from flask_cors import CORS
 import json
 import requests
 from ocr_utils import extract_text_from_image
 from welcome_handler import is_greeting, generate_greeting_message, is_new_user, mark_user_greeted
-from db_utils import get_product_by_sku  # ✅ ใช้ PostgreSQL
+from db_utils import get_product_by_sku
 from product_api import product_api
 
 app = Flask(__name__)
+CORS(app)  # ✅ เพิ่ม CORS ให้รองรับ POST จาก Hoppscotch และเว็บอื่น
 
 LINE_CHANNEL_ACCESS_TOKEN = "qwzQAyLRTVcsHmcxBUvyrSojIDdxm4tO8Wl/LWEtfUARGP/ntFGSblJL/wM958SoBnyWRFtWK13Un6hcZxXk/BqM8H5FjjJpT40orkVVLJeoKCk6Aebsu8yPT4Yw+9lOV8ZWnklsQ5ueLSsIkNBCowdB04t89/1O/w1cDnyilFU="
 LINE_REPLY_ENDPOINT = "https://api.line.me/v2/bot/message/reply"
@@ -119,5 +121,12 @@ def webhook():
 
     return "OK", 200
 
-# ✅ Register blueprint ที่นี่ (นอกฟังก์ชัน)
+# ✅ Blueprint สำหรับ API สินค้า
 app.register_blueprint(product_api)
+
+# ✅ Optional: ปรับ Headers ตอบกลับเพื่อรองรับ CORS เพิ่มเติม
+@app.after_request
+def after_request(response):
+    response.headers.add("Access-Control-Allow-Headers", "Content-Type,Authorization")
+    response.headers.add("Access-Control-Allow-Methods", "GET,POST,OPTIONS")
+    return response
