@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify
 from db_utils import create_order, get_or_create_customer_by_line_id
-from db_models import Customer, Order, OrderItem  # <-- ✅ ต้อง import มาด้วย
+from db_models import Customer, Order, OrderItem  # ✅ ต้อง import ให้ครบ
 from sqlalchemy.exc import SQLAlchemyError
 from db_config import SessionLocal
 
@@ -32,8 +32,9 @@ def create_new_order():
             status='new'
         )
         session.add(order)
-        session.flush()
+        session.flush()  # เพื่อให้ได้ order.id
 
+        # 3. เพิ่มรายการ OrderItem
         for item in data["items"]:
             order_item = OrderItem(
                 order_id=order.id,
@@ -53,6 +54,28 @@ def create_new_order():
 
     except SQLAlchemyError as e:
         session.rollback()
+        return jsonify({"error": str(e)}), 400
+    finally:
+        session.close()
+
+# 📦 ดึงออเดอร์ทั้งหมด
+@order_api.route('/orders', methods=['GET'])
+def get_all_orders():
+    session = SessionLocal()
+    try:
+        orders = session.query(Order).all()
+        result = []
+        for order in orders:
+            result.append({
+                "order_number": order.order_number,
+                "channel": order.channel,
+                "customer_id": order.customer_id,
+                "total_amount": float(order.total_amount),
+                "status": order.status,
+                "created_at": order.created_at.strftime("%Y-%m-%d %H:%M:%S") if order.created_at else None
+            })
+        return jsonify(result), 200
+    except SQLAlchemyError as e:
         return jsonify({"error": str(e)}), 400
     finally:
         session.close()
