@@ -12,22 +12,42 @@ def create_new_order():
     session = SessionLocal()
     try:
         # 1. หา/สร้างลูกค้าจาก LINE userId
-        customer = get_or_create_customer_by_line_id(
-            line_user_id=data["line_user_id"],
-            name=data.get("name")
-        )
-        
+        customer = session.query(Customer).filter(Customer.line_user_id == data["line_user_id"]).first()
+        if not customer:
+            customer = Customer(
+                line_user_id=data["line_user_id"],
+                name=data.get("name")
+            )
+            session.add(customer)
+            session.flush()  # ให้ได้ customer.id ทันที
+
         # 2. สร้างออเดอร์
-        order_id = create_order(
+        total = sum(item['price'] * item['quantity'] for item in data["items"])
+        order = Order(
             order_number=data["order_number"],
-            channel=data.get("channel", "line"),  # default = line
+            channel=data.get("channel", "line"),
             customer_id=customer.id,
-            items=data["items"]
+            total_amount=total,
+            status='new'
         )
+        session.add(order)
+        session.flush()
+
+        for item in data["items"]:
+            order_item = OrderItem(
+                order_id=order.id,
+                product_id=item["product_id"],
+                quantity=item["quantity"],
+                price=item["price"],
+                cost_at_sale=item.get("cost_at_sale", 0)
+            )
+            session.add(order_item)
+
+        session.commit()
 
         return jsonify({
             "message": "สร้างออเดอร์สำเร็จ ✅",
-            "order_id": order_id
+            "order_id": order.id
         }), 201
 
     except SQLAlchemyError as e:
