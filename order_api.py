@@ -97,6 +97,7 @@ def get_order_detail(order_id):
             })
 
         return jsonify({
+            "order_id": order.id,
             "order_number": order.order_number,
             "channel": order.channel,
             "customer_id": order.customer_id,
@@ -136,39 +137,8 @@ def update_order_status(order_id):
             "message": f"อัปเดตสถานะออเดอร์เป็น {new_status} สำเร็จ ✅"
         }), 200
 
-       # 📦 ดึงรายละเอียดออเดอร์ + รายการสินค้าในออเดอร์
-       @order_api.route('/orders/<int:order_id>', methods=['GET'])
-       def get_order_detail(order_id):
-           session = SessionLocal()
-           try:
-               order = session.query(Order).filter(Order.id == order_id).first()
-               if not order:
-                   return jsonify({"error": "ไม่พบออเดอร์นี้"}), 404
-
-           # ดึง Order Items ทั้งหมดในออเดอร์นี้
-           items = session.query(OrderItem).filter(OrderItem.order_id == order_id).all()
-           item_list = []
-           for item in items:
-               item_list.append({
-                   "product_id": item.product_id,
-                   "quantity": item.quantity,
-                   "price": float(item.price),
-                   "cost_at_sale": float(item.cost_at_sale)
-               })
-
-            # ตอบกลับข้อมูลรวม
-            return jsonify({
-                "order_id": order.id,
-                "order_number": order.order_number,
-                "channel": order.channel,
-                "customer_id": order.customer_id,
-                "total_amount": float(order.total_amount),
-                "status": order.status,
-                "created_at": order.created_at.strftime("%Y-%m-%d %H:%M:%S") if order.created_at else None,
-                "items": item_list
-            }), 200
-
     except SQLAlchemyError as e:
+        session.rollback()
         return jsonify({"error": str(e)}), 400
     finally:
         session.close()
