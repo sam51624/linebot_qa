@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify
 from db_utils import create_order, get_or_create_customer_by_line_id
-from db_models import Customer, Order, OrderItem  # ✅ ต้อง import ให้ครบ
+from db_models import Customer, Order, OrderItem
 from sqlalchemy.exc import SQLAlchemyError
 from db_config import SessionLocal
 
@@ -12,7 +12,6 @@ def create_new_order():
     data = request.json
     session = SessionLocal()
     try:
-        # 1. หา/สร้างลูกค้าจาก LINE userId
         customer = session.query(Customer).filter(Customer.line_user_id == data["line_user_id"]).first()
         if not customer:
             customer = Customer(
@@ -20,9 +19,8 @@ def create_new_order():
                 name=data.get("name")
             )
             session.add(customer)
-            session.flush()  # ให้ได้ customer.id ทันที
+            session.flush()
 
-        # 2. สร้างออเดอร์
         total = sum(item['price'] * item['quantity'] for item in data["items"])
         order = Order(
             order_number=data["order_number"],
@@ -32,9 +30,8 @@ def create_new_order():
             status='new'
         )
         session.add(order)
-        session.flush()  # เพื่อให้ได้ order.id
+        session.flush()
 
-        # 3. เพิ่มรายการ OrderItem
         for item in data["items"]:
             order_item = OrderItem(
                 order_id=order.id,
@@ -113,3 +110,34 @@ def get_order_detail(order_id):
     finally:
         session.close()
 
+# ✏️ อัปเดตสถานะออเดอร์
+@order_api.route('/orders/<int:order_id>', methods=['PATCH'])
+def update_order_status(order_id):
+    session = SessionLocal()
+    data = request.json
+    try:
+        order = session.query(Order).filter(Order.id == order_id).first()
+        if not order:
+            return jsonify({"error": "ไม่พบออเดอร์"}), 404
+
+        new_status = data.get("status")
+        if not new_status:
+            return jsonify({"error": "กรุณาระบุสถานะใหม่ (status)"}), 400
+
+        # ✅ ตรวจสอบว่าสถานะใหม่ต้องอยู่ในรายการที่กำหนด
+        allowed_statuses = ["new", "waiting_payment", "paid", "shipped", "cancelled", "completed", "refunded"]
+        if new_status not in allowed_statuses:
+            return jsonify({"error": f"สถานะ '{new_status}' ไม่อนุญาต กรุณาเลือกจาก {allowed_statuses}"}), 400
+
+        order.status = new_status
+        session.commit()
+
+        return jsonify({
+            "message": f"อัปเดตสถานะออเดอร์เป็น {new_status} สำเร็จ ✅"
+        }), 200
+
+    except SQLAlchemyError as e:
+        session.rollback()
+        return jsonify({"error": str(e)}), 400
+    finally:
+        session.close()
