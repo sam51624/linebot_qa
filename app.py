@@ -104,3 +104,8 @@ def webhook():
 app.register_blueprint(product_api)
 app.register_blueprint(order_api)
 
+@app.route("/", methods=["GET"])
+def index():
+    return "✅ LINE AI Backend is running on Cloud Run", 200
+
+
