@@ -49,6 +49,5 @@ def login():
     finally:
         session.close()
 
-Add auth_api.py for user registration and login
 
 
