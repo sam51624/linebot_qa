@@ -3,7 +3,7 @@ name: Deploy to Cloud Run
 on:
   push:
     branches:
-      - main  # หรือเปลี่ยนเป็นชื่อ branch ที่คุณใช้
+      - main
 
 jobs:
   deploy:
@@ -23,5 +23,4 @@ jobs:
         with:
           service: kts-line-ai
           region: asia-southeast1
-          image: gcr.io/${{ secrets.GCP_PROJECT_ID }}/linebot-qa
           source: .
