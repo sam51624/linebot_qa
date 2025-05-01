@@ -11,6 +11,4 @@ faiss-cpu
 pytz==2024.1
 sqlalchemy>=1.4
 psycopg2-binary
-flask_cors
 flask-cors
-
