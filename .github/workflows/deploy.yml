@@ -1,0 +1,27 @@
+name: Deploy to Cloud Run
+
+on:
+  push:
+    branches:
+      - main  # หรือเปลี่ยนเป็นชื่อ branch ที่คุณใช้
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Authenticate with Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Deploy to Cloud Run
+        uses: google-github-actions/deploy-cloudrun@v2
+        with:
+          service: kts-line-ai
+          region: asia-southeast1
+          image: gcr.io/${{ secrets.GCP_PROJECT_ID }}/linebot-qa
+          source: .
