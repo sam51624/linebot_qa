@@ -7,7 +7,8 @@ ENV PYTHONUNBUFFERED=1
 # 🔹 3. ติดตั้ง system dependencies ที่จำเป็น
 RUN apt-get update && apt-get install -y \
     build-essential \
-    libglib2.0-0 \
+    libffi-dev \
+    python3-dev \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
