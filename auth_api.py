@@ -8,6 +8,9 @@ auth_api = Blueprint('auth_api', __name__)
 @auth_api.route("/api/register", methods=["POST"])
 def register():
     data = request.get_json()
+    if not data:
+        return jsonify({"error": "ไม่ได้รับข้อมูล JSON"}), 400
+
     username = data.get("username")
     password = data.get("password")
 
@@ -25,8 +28,9 @@ def register():
         session.commit()
 
         return jsonify({"message": "สมัครสมาชิกสำเร็จ"})
-    except SQLAlchemyError:
+    except SQLAlchemyError as e:
         session.rollback()
+        print("❌ SQLAlchemyError:", str(e))
         return jsonify({"error": "เกิดข้อผิดพลาดในระบบ"}), 500
     finally:
         session.close()
@@ -34,6 +38,9 @@ def register():
 @auth_api.route("/api/login", methods=["POST"])
 def login():
     data = request.get_json()
+    if not data:
+        return jsonify({"error": "ไม่ได้รับข้อมูล JSON"}), 400
+
     username = data.get("username")
     password = data.get("password")
 
@@ -44,10 +51,10 @@ def login():
             return jsonify({"message": "เข้าสู่ระบบสำเร็จ"})
         else:
             return jsonify({"error": "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง"}), 401
-    except SQLAlchemyError:
+    except SQLAlchemyError as e:
+        print("❌ SQLAlchemyError:", str(e))
         return jsonify({"error": "เกิดข้อผิดพลาดในระบบ"}), 500
     finally:
         session.close()
-
 
 
