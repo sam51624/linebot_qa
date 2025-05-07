@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify
 from db_config import SessionLocal
-from db_models import Product
+from db_models import Product, ProductImage
 from sqlalchemy.exc import SQLAlchemyError
 
 product_api = Blueprint('product_api', __name__)
@@ -16,7 +16,8 @@ def get_all_products():
                 "sku": p.sku,
                 "name": p.name,
                 "price": float(p.price),
-                "stock_quantity": p.stock_quantity
+                "stock_quantity": p.stock_quantity,
+                "images": [img.url for img in p.images]
             }
             for p in products
         ]
@@ -35,15 +36,21 @@ def add_product():
             name=data["name"],
             description=data.get("description", ""),
             category=data.get("category", ""),
-            cost_price=data.get("cost_price", 0),
-            price=data["price"],
-            stock_quantity=data.get("stock_quantity", 0),
-            available_stock=data.get("available_stock", 0),
-            image_url=data.get("image_url", "")
+            cost_price=float(data.get("cost_price", 0)),
+            price=float(data.get("price", 0)),  # ✅ ป้องกัน KeyError ที่นี่
+            stock_quantity=int(data.get("stock_quantity", 0)),
+            available_stock=int(data.get("available_stock", 0)),
+            image_url=""
         )
+
+        # ✅ เพิ่มรูปภาพ (ถ้ามี)
+        image_urls = data.get("images", [])
+        for url in image_urls:
+            product.images.append(ProductImage(url=url))
+
         session.add(product)
         session.commit()
-        return jsonify({"message": "เพิ่มสินค้าสำเร็จ ✅"}), 201
+        return jsonify({"message": "เพิ่มสินค้าสำเร็จ ✅", "product_id": product.id}), 201
     except SQLAlchemyError as e:
         session.rollback()
         return jsonify({"error": str(e)}), 400
@@ -67,10 +74,11 @@ def get_product_by_sku(sku):
                 "price": float(product.price),
                 "stock_quantity": product.stock_quantity,
                 "available_stock": product.available_stock,
-                "image_url": product.image_url,
+                "images": [img.url for img in product.images],
                 "created_at": product.created_at.strftime("%Y-%m-%d %H:%M:%S") if product.created_at else None
             }), 200
         else:
             return jsonify({"error": "ไม่พบสินค้า"}), 404
     finally:
         session.close()
+
